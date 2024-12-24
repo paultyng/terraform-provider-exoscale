@@ -51,6 +51,9 @@ directory for complete configuration examples.
 - `kubelet_image_gc` (Block Set) Configuration for this nodepool's kubelet image garbage collector (see [below for nested schema](#nestedblock--kubelet_image_gc))
 - `labels` (Map of String) A map of key/value labels.
 - `private_network_ids` (Set of String) A list of [exoscale_private_network](./private_network.md) (IDs) to be attached to the managed instances.
+- `public_ip_assignment` (String) Configures public IP assignment of the Instances with:
+    * IPv4 ('inet4') addressing only (default);
+    * both IPv4 and IPv6 ('dual') addressing.
 - `security_group_ids` (Set of String) A list of [exoscale_security_group](./security_group.md) (IDs) to be attached to the managed instances.
 - `storage_lvm` (Boolean) Create nodes with non-standard partitioning for persistent storage (requires min 100G of disk space) (may only be set at creation time).
 - `taints` (Map of String) A map of key/value Kubernetes [taints](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) ('taints = { <key> = "<value>:<effect>" }').

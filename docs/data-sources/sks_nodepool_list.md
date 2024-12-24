@@ -32,6 +32,7 @@ description: |-
 - `instance_type` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `labels` (Map of String) Match against key/values. Keys are matched exactly, while values may be matched as a regex if you supply a string that begins and ends with "/"
 - `name` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
+- `public_ip_assignment` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `size` (Number) Match against this int
 - `state` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `storage_lvm` (Boolean) Match against this bool
@@ -62,6 +63,7 @@ Read-Only:
 - `labels` (Map of String)
 - `name` (String)
 - `private_network_ids` (Set of String)
+- `public_ip_assignment` (String)
 - `security_group_ids` (Set of String)
 - `size` (Number)
 - `state` (String)

@@ -12393,6 +12393,13 @@ func (c Client) GetSKSClusterInspection(ctx context.Context, id UUID) (*GetSKSCl
 	return bodyresp, nil
 }
 
+type CreateSKSNodepoolRequestPublicIPAssignment string
+
+const (
+	CreateSKSNodepoolRequestPublicIPAssignmentInet4 CreateSKSNodepoolRequestPublicIPAssignment = "inet4"
+	CreateSKSNodepoolRequestPublicIPAssignmentDual  CreateSKSNodepoolRequestPublicIPAssignment = "dual"
+)
+
 type CreateSKSNodepoolRequest struct {
 	// Nodepool addons
 	Addons []string `json:"addons,omitempty"`
@@ -12415,6 +12422,10 @@ type CreateSKSNodepoolRequest struct {
 	Name string `json:"name" validate:"required,gte=1,lte=255"`
 	// Nodepool Private Networks
 	PrivateNetworks []PrivateNetwork `json:"private-networks,omitempty"`
+	// Configures public IP assignment of the Instances with:
+	// * both IPv4 and IPv6 (`dual`) addressing.
+	// * both IPv4 and IPv6 (`dual`) addressing.
+	PublicIPAssignment CreateSKSNodepoolRequestPublicIPAssignment `json:"public-ip-assignment,omitempty"`
 	// Nodepool Security Groups
 	SecurityGroups []SecurityGroup `json:"security-groups,omitempty"`
 	// Number of instances
@@ -12558,6 +12569,13 @@ func (c Client) GetSKSNodepool(ctx context.Context, id UUID, sksNodepoolID UUID)
 	return bodyresp, nil
 }
 
+type UpdateSKSNodepoolRequestPublicIPAssignment string
+
+const (
+	UpdateSKSNodepoolRequestPublicIPAssignmentInet4 UpdateSKSNodepoolRequestPublicIPAssignment = "inet4"
+	UpdateSKSNodepoolRequestPublicIPAssignmentDual  UpdateSKSNodepoolRequestPublicIPAssignment = "dual"
+)
+
 type UpdateSKSNodepoolRequest struct {
 	// Nodepool Anti-affinity Groups
 	AntiAffinityGroups []AntiAffinityGroup `json:"anti-affinity-groups,omitempty"`
@@ -12576,6 +12594,10 @@ type UpdateSKSNodepoolRequest struct {
 	Name string `json:"name,omitempty" validate:"omitempty,gte=1,lte=255"`
 	// Nodepool Private Networks
 	PrivateNetworks []PrivateNetwork `json:"private-networks,omitempty"`
+	// Configures public IP assignment of the Instances with:
+	// * both IPv4 and IPv6 (`dual`) addressing.
+	// * both IPv4 and IPv6 (`dual`) addressing.
+	PublicIPAssignment UpdateSKSNodepoolRequestPublicIPAssignment `json:"public-ip-assignment,omitempty"`
 	// Nodepool Security Groups
 	SecurityGroups []SecurityGroup   `json:"security-groups,omitempty"`
 	Taints         SKSNodepoolTaints `json:"taints,omitempty"`
