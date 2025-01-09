@@ -23,7 +23,7 @@ import (
 	"github.com/exoscale/terraform-provider-exoscale/pkg/testutils"
 )
 
-type TemplateModelKafka struct {
+type TemplateModelOpensearch struct {
 	ResourceName string
 
 	Name string
@@ -34,56 +34,66 @@ type TemplateModelKafka struct {
 	MaintenanceTime       string
 	TerminationProtection bool
 
-	EnableCertAuth         bool
-	EnableKafkaConnect     bool
-	EnableKafkaREST        bool
-	EnableSASLAuth         bool
-	EnableSchemaRegistry   bool
-	IpFilter               []string
-	KafkaSettings          string
-	ConnectSettings        string
-	RestSettings           string
-	SchemaRegistrySettings string
-	Version                string
+	IpFilter                 []string
+	ForkFromService          string
+	RecoveryBackupName       string
+	IndexPatterns            []TemplateModelOpensearchIndexPattern
+	IndexTemplate            *TemplateModelOpensearchIndexTemplate
+	Dashboards               *TemplateModelOpensearchDashboards
+	KeepIndexRefreshInterval bool
+	MaxIndexCount            string
+	OpensearchSettings       string
+	Version                  string
 }
 
-type TemplateModelKafkaUser struct {
+type TemplateModelOpensearchIndexPattern struct {
+	MaxIndexCount    int64
+	Pattern          string
+	SortingAlgorithm string
+}
+
+type TemplateModelOpensearchIndexTemplate struct {
+	MappingNestedObjectsLimit int64
+	NumberOfReplicas          int64
+	NumberOfShards            int64
+}
+
+type TemplateModelOpensearchDashboards struct {
+	Enabled         bool
+	MaxOldSpaceSize int64
+	RequestTimeout  int64
+}
+
+type TemplateModelOpensearchUser struct {
 	ResourceName string
 
 	Username string
-	Zone     string
 	Service  string
-
-	Type     string
-	Password string
-
-	AccessKey        string
-	AccessCert       string
-	AccessCertExpiry string
+	Zone     string
 }
 
-func testResourceKafka(t *testing.T) {
-	serviceTpl, err := template.ParseFiles("testdata/resource_kafka.tmpl")
+func testResourceOpensearch(t *testing.T) {
+	serviceTpl, err := template.ParseFiles("testdata/resource_opensearch.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	userTpl, err := template.ParseFiles("testdata/resource_user_kafka.tmpl")
+	userTpl, err := template.ParseFiles("testdata/resource_user_opensearch.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	serviceFullResourceName := "exoscale_database.test"
-	serviceDataBase := TemplateModelKafka{
+	serviceFullResourceName := "exoscale_dbaas.test"
+	serviceDataBase := TemplateModelOpensearch{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),
-		Plan:                  "business-4",
+		Plan:                  "hobbyist-2",
 		Zone:                  testutils.TestZoneName,
 		TerminationProtection: false,
-		Version:               "3.7",
+		Version:               "1",
 	}
 
-	userFullResourceName := "exoscale_dbaas_kafka_user.test_user"
-	userDataBase := TemplateModelKafkaUser{
+	userFullResourceName := "exoscale_dbaas_opensearch_user.test_user"
+	userDataBase := TemplateModelOpensearchUser{
 		ResourceName: "test_user",
 		Username:     "foo",
 		Zone:         serviceDataBase.Zone,
@@ -93,9 +103,15 @@ func testResourceKafka(t *testing.T) {
 	serviceDataCreate := serviceDataBase
 	serviceDataCreate.MaintenanceDow = "monday"
 	serviceDataCreate.MaintenanceTime = "01:23:00"
-	serviceDataCreate.EnableCertAuth = true
-	serviceDataCreate.IpFilter = []string{"1.2.3.4/32"}
-	serviceDataCreate.KafkaSettings = strconv.Quote(`{"num_partitions":10}`)
+	serviceDataCreate.IndexPatterns = []TemplateModelOpensearchIndexPattern{
+		{2, "log.?", "alphabetical"},
+		{12, "internet.*", "creation_date"},
+	}
+	serviceDataCreate.IndexTemplate = &TemplateModelOpensearchIndexTemplate{5, 4, 3}
+	serviceDataCreate.Dashboards = &TemplateModelOpensearchDashboards{true, 129, 30001}
+	serviceDataCreate.KeepIndexRefreshInterval = true
+	serviceDataCreate.IpFilter = []string{"0.0.0.0/0"}
+	serviceDataCreate.MaxIndexCount = "4"
 
 	userDataCreate := userDataBase
 
@@ -113,14 +129,16 @@ func testResourceKafka(t *testing.T) {
 	serviceDataUpdate := serviceDataBase
 	serviceDataUpdate.MaintenanceDow = "tuesday"
 	serviceDataUpdate.MaintenanceTime = "02:34:00"
-	serviceDataUpdate.EnableCertAuth = false
-	serviceDataUpdate.EnableSASLAuth = true
-	serviceDataUpdate.EnableKafkaREST = true
-	serviceDataUpdate.EnableKafkaConnect = true
+	serviceDataUpdate.IndexPatterns = []TemplateModelOpensearchIndexPattern{
+		{4, "log.?", "alphabetical"},
+		{12, "internet.*", "creation_date"},
+	}
+	serviceDataUpdate.IndexTemplate = &TemplateModelOpensearchIndexTemplate{5, 4, 3}
+	serviceDataUpdate.Dashboards = &TemplateModelOpensearchDashboards{true, 132, 30006}
+	serviceDataUpdate.KeepIndexRefreshInterval = true
+	serviceDataUpdate.MaxIndexCount = "0"
+	serviceDataUpdate.IpFilter = []string{"1.1.1.1/32"}
 	serviceDataUpdate.IpFilter = nil
-	serviceDataUpdate.KafkaSettings = strconv.Quote(`{"compression_type":"gzip","num_partitions":10}`)
-	serviceDataUpdate.RestSettings = strconv.Quote(`{"consumer_request_max_bytes":100000}`)
-	serviceDataUpdate.ConnectSettings = strconv.Quote(`{"session_timeout_ms":6000}`)
 
 	userDataUpdate := userDataBase
 	userDataUpdate.Username = "bar"
@@ -138,7 +156,7 @@ func testResourceKafka(t *testing.T) {
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutils.AccPreCheck(t) },
-		CheckDestroy:             CheckServiceDestroy("kafka", serviceDataBase.Name),
+		CheckDestroy:             CheckServiceDestroy("opensearch", serviceDataBase.Name),
 		ProtoV6ProviderFactories: testutils.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -154,22 +172,18 @@ func testResourceKafka(t *testing.T) {
 					resource.TestCheckResourceAttrSet(serviceFullResourceName, "ca_certificate"),
 					resource.TestCheckResourceAttrSet(serviceFullResourceName, "updated_at"),
 					func(s *terraform.State) error {
-						err := CheckExistsKafka(serviceDataBase.Name, &serviceDataCreate)
+						err := CheckExistsOpensearch(serviceDataBase.Name, &serviceDataCreate)
 						if err != nil {
 							return err
 						}
 
 						return nil
 					},
-
 					// User
 					resource.TestCheckResourceAttrSet(userFullResourceName, "password"),
 					resource.TestCheckResourceAttrSet(userFullResourceName, "type"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_key"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_cert"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_cert_expiry"),
 					func(s *terraform.State) error {
-						err := CheckExistsKafkaUser(serviceDataBase.Name, userDataBase.Username, &userDataCreate)
+						err := CheckExistsOpensearchUser(serviceDataBase.Name, userDataBase.Username, &userDataCreate)
 						if err != nil {
 							return err
 						}
@@ -184,7 +198,7 @@ func testResourceKafka(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Service
 					func(s *terraform.State) error {
-						err := CheckExistsKafka(serviceDataBase.Name, &serviceDataUpdate)
+						err := CheckExistsOpensearch(serviceDataBase.Name, &serviceDataUpdate)
 						if err != nil {
 							return err
 						}
@@ -195,19 +209,18 @@ func testResourceKafka(t *testing.T) {
 					// User
 					func(s *terraform.State) error {
 						// Check the old user was deleted
-						err := CheckExistsKafkaUser(serviceDataBase.Name, userDataBase.Username, &userDataUpdate)
+						err := CheckExistsOpensearchUser(serviceDataBase.Name, userDataBase.Username, &userDataUpdate)
 						if err == nil {
 							return fmt.Errorf("expected to not find user %s", userDataBase.Username)
 						}
 
 						// Check the new user exists
-						err = CheckExistsKafkaUser(serviceDataBase.Name, userDataUpdate.Username, &userDataUpdate)
+						err = CheckExistsOpensearchUser(serviceDataBase.Name, userDataUpdate.Username, &userDataUpdate)
 						if err != nil {
 							return err
 						}
 
 						return nil
-
 					},
 				),
 			},
@@ -237,7 +250,7 @@ func testResourceKafka(t *testing.T) {
 	})
 }
 
-func CheckExistsKafka(name string, data *TemplateModelKafka) error {
+func CheckExistsOpensearch(name string, data *TemplateModelOpensearch) error {
 	client, err := testutils.APIClient()
 	if err != nil {
 		return err
@@ -245,7 +258,7 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 
 	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
 
-	res, err := client.GetDbaasServiceKafkaWithResponse(ctx, oapi.DbaasServiceName(name))
+	res, err := client.GetDbaasServiceOpensearchWithResponse(ctx, oapi.DbaasServiceName(name))
 	if err != nil {
 		return err
 	}
@@ -263,40 +276,56 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 	}
 
 	if !cmp.Equal(data.IpFilter, *service.IpFilter, cmpopts.EquateEmpty()) {
-		return fmt.Errorf("kafka.ip_filter: expected %q, got %q", data.IpFilter, *service.IpFilter)
+		return fmt.Errorf("opensearch.ip_filter: expected %q, got %q", data.IpFilter, *service.IpFilter)
 	}
 
 	if v := string(service.Maintenance.Dow); data.MaintenanceDow != v {
-		return fmt.Errorf("kafka.maintenance_dow: expected %q, got %q", data.MaintenanceDow, v)
+		return fmt.Errorf("opensearch.maintenance_dow: expected %q, got %q", data.MaintenanceDow, v)
 	}
 
 	if data.MaintenanceTime != service.Maintenance.Time {
-		return fmt.Errorf("kafka.maintenance_time: expected %q, got %q", data.MaintenanceTime, service.Maintenance.Time)
+		return fmt.Errorf("opensearch.maintenance_time: expected %q, got %q", data.MaintenanceTime, service.Maintenance.Time)
 	}
 
-	if data.EnableKafkaConnect != *service.KafkaConnectEnabled {
-		return fmt.Errorf("kafka.enable_kafka_connect: expected %v, got %v", data.EnableKafkaConnect, *service.KafkaConnectEnabled)
+	if data.KeepIndexRefreshInterval != *service.KeepIndexRefreshInterval {
+		return fmt.Errorf("keep_index_refresh_interval: expected %v, got %v", data.KeepIndexRefreshInterval, *service.KeepIndexRefreshInterval)
 	}
 
-	if data.EnableKafkaREST != *service.KafkaRestEnabled {
-		return fmt.Errorf("kafka.enable_kafka_rest: expected %v, got %v", data.EnableKafkaREST, *service.KafkaRestEnabled)
+	if data.MaxIndexCount != strconv.FormatInt(*service.MaxIndexCount, 10) {
+		return fmt.Errorf("max_index_count: expected %v, got %v", data.MaxIndexCount, *service.MaxIndexCount)
 	}
 
-	if data.EnableSchemaRegistry != *service.SchemaRegistryEnabled {
-		return fmt.Errorf("kafka.enable_schema_registry: expected %v, got %v", data.EnableSchemaRegistry, *service.SchemaRegistryEnabled)
+	if len(data.IndexPatterns) != len(*service.IndexPatterns) {
+		return fmt.Errorf("index_patterns: expected length of %v, got %v", len(data.IndexPatterns), len(*service.IndexPatterns))
 	}
 
-	if data.EnableCertAuth != *service.AuthenticationMethods.Certificate {
-		return fmt.Errorf("kafka.enable_cert_auth: expected %v, got %v", data.EnableCertAuth, *service.AuthenticationMethods.Certificate)
+	if data.IndexTemplate != nil && service.IndexTemplate != nil {
+		if data.IndexTemplate.MappingNestedObjectsLimit != *service.IndexTemplate.MappingNestedObjectsLimit {
+			return fmt.Errorf("index_template.mapping_nasted_objects_limit: expected %v, got %v", data.IndexTemplate.MappingNestedObjectsLimit, *service.IndexTemplate.MappingNestedObjectsLimit)
+		}
+		if data.IndexTemplate.NumberOfReplicas != *service.IndexTemplate.NumberOfReplicas {
+			return fmt.Errorf("index_template.number_of_replicas: expected %v, got %v", data.IndexTemplate.NumberOfReplicas, *service.IndexTemplate.NumberOfReplicas)
+		}
+		if data.IndexTemplate.NumberOfShards != *service.IndexTemplate.NumberOfShards {
+			return fmt.Errorf("index_template.number_of_shards: expected %v, got %v", data.IndexTemplate.NumberOfShards, *service.IndexTemplate.NumberOfShards)
+		}
 	}
 
-	if data.EnableSASLAuth != *service.AuthenticationMethods.Sasl {
-		return fmt.Errorf("kafka.enable_sasl_auth: expected %v, got %v", data.EnableSASLAuth, *service.AuthenticationMethods.Sasl)
+	if data.Dashboards != nil && service.OpensearchDashboards != nil {
+		if data.Dashboards.Enabled != *service.OpensearchDashboards.Enabled {
+			return fmt.Errorf("dashboards.enabled: expected %v, got %v", data.Dashboards.Enabled, *service.OpensearchDashboards.Enabled)
+		}
+		if data.Dashboards.MaxOldSpaceSize != *service.OpensearchDashboards.MaxOldSpaceSize {
+			return fmt.Errorf("dashboards.max_old_space_size: expected %v, got %v", data.Dashboards.MaxOldSpaceSize, *service.OpensearchDashboards.MaxOldSpaceSize)
+		}
+		if data.Dashboards.RequestTimeout != *service.OpensearchDashboards.OpensearchRequestTimeout {
+			return fmt.Errorf("dashboards.request_timeout: expected %v, got %v", data.Dashboards.RequestTimeout, *service.OpensearchDashboards.OpensearchRequestTimeout)
+		}
 	}
 
-	if data.KafkaSettings != "" {
+	if data.OpensearchSettings != "" {
 		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.KafkaSettings)
+		s, err := strconv.Unquote(data.OpensearchSettings)
 		if err != nil {
 			return err
 		}
@@ -306,74 +335,20 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 		}
 		if !cmp.Equal(
 			obj,
-			*service.KafkaSettings,
+			*service.OpensearchSettings,
 		) {
-			return fmt.Errorf("kafka.kafka_settings: expected %q, got %q", obj, *service.KafkaSettings)
-		}
-	}
-
-	if data.ConnectSettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.ConnectSettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.KafkaConnectSettings,
-		) {
-			return fmt.Errorf("kafka.kafka_connect_settings: expected %q, got %q", obj, *service.KafkaConnectSettings)
-		}
-	}
-
-	if data.RestSettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.RestSettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.KafkaRestSettings,
-		) {
-			return fmt.Errorf("kafka.kafka_rest_settings: expected %q, got %q", obj, *service.KafkaRestSettings)
-		}
-	}
-
-	if data.SchemaRegistrySettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.SchemaRegistrySettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.SchemaRegistrySettings,
-		) {
-			return fmt.Errorf("kafka.schema_registry_settings: expected %q, got %q", obj, *service.SchemaRegistrySettings)
+			return fmt.Errorf("opensearch.opensearch_settings: expected %q, got %q", obj, *service.OpensearchSettings)
 		}
 	}
 
 	if data.Version != *service.Version {
-		return fmt.Errorf("kafka.version: expected %q, got %q", data.Version, *service.Version)
+		return fmt.Errorf("opensearch.version: expected %q, got %q", data.Version, *service.Version)
 	}
 
 	return nil
 }
 
-func CheckExistsKafkaUser(service, username string, data *TemplateModelKafkaUser) error {
+func CheckExistsOpensearchUser(service, username string, data *TemplateModelOpensearchUser) error {
 
 	client, err := testutils.APIClient()
 	if err != nil {
@@ -382,7 +357,7 @@ func CheckExistsKafkaUser(service, username string, data *TemplateModelKafkaUser
 
 	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
 
-	res, err := client.GetDbaasServiceKafkaWithResponse(ctx, oapi.DbaasServiceName(service))
+	res, err := client.GetDbaasServiceOpensearchWithResponse(ctx, oapi.DbaasServiceName(service))
 	if err != nil {
 		return err
 	}

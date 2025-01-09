@@ -1,4 +1,4 @@
-resource "exoscale_database" {{ .ResourceName }} {
+resource "exoscale_dbaas" {{ .ResourceName }} {
   name = "{{ .Name }}"
   type = "grafana"
   plan = "{{ .Plan }}"

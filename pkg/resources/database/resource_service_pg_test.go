@@ -61,7 +61,7 @@ func testResourcePg(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serviceFullResourceName := "exoscale_database.test"
+	serviceFullResourceName := "exoscale_dbaas.test"
 	serviceDataBase := TemplateModelPg{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),

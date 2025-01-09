@@ -68,7 +68,7 @@ var ResourceMysqlSchema = schema.SingleNestedBlock{
 }
 
 // createMysql function handles MySQL specific part of database resource creation logic.
-func (r *Resource) createMysql(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) createMysql(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	mysqlData := &ResourceMysqlModel{}
 	if data.Mysql != nil {
 		mysqlData = data.Mysql
@@ -168,7 +168,7 @@ func (r *Resource) createMysql(ctx context.Context, data *ResourceModel, diagnos
 
 // readMysql function handles MySQL specific part of database resource Read logic.
 // It is used in the dedicated Read action but also as a finishing step of Create, Update and Import.
-func (r *Resource) readMysql(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) readMysql(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	caCert, err := r.client.GetDatabaseCACertificate(ctx, data.Zone.ValueString())
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get CA Certificate: %s", err))
@@ -247,7 +247,7 @@ func (r *Resource) readMysql(ctx context.Context, data *ResourceModel, diagnosti
 }
 
 // updateMysql function handles MySQL specific part of database resource Update logic.
-func (r *Resource) updateMysql(ctx context.Context, stateData *ResourceModel, planData *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) updateMysql(ctx context.Context, stateData *ServiceResourceModel, planData *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	var updated bool
 
 	service := oapi.UpdateDbaasServiceMysqlJSONRequestBody{}
