@@ -67,23 +67,23 @@ func (r *PGUserResource) Schema(ctx context.Context, req resource.SchemaRequest,
 
 func (r *PGUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data PGUserResourceModel
-	UserRead(ctx, req, resp, &data, r.client)
+	ReadResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *PGUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 
 	var data PGUserResourceModel
-	UserCreate(ctx, req, resp, &data, r.client)
+	CreateResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *PGUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var stateData, planData PGUserResourceModel
-	UserUpdate(ctx, req, resp, &stateData, &planData, r.client)
+	UpdateResource(ctx, req, resp, &stateData, &planData, r.client)
 }
 
 func (r *PGUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data PGUserResourceModel
-	UserDelete(ctx, req, resp, &data, r.client)
+	DeleteResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *PGUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -130,9 +130,8 @@ func (r *PGUserResource) ImportState(ctx context.Context, req resource.ImportSta
 	data.Username = types.StringValue(username)
 	data.Service = types.StringValue(serviceName)
 	data.Zone = types.StringValue(zone)
-	data.Zone = types.StringValue(zone)
 
-	UserReadForImport(ctx, req, resp, &data, r.client)
+	ReadResourceForImport(ctx, req, resp, &data, r.client)
 
 }
 
@@ -183,7 +182,7 @@ func (data *PGUserResourceModel) CreateResource(ctx context.Context, client *exo
 	diagnostics.AddError("Client Error", "Unable to find newly created user for the service")
 }
 
-func (data *PGUserResourceModel) Delete(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *PGUserResourceModel) DeleteResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
 
 	op, err := client.DeleteDBAASPostgresUser(ctx, data.Service.ValueString(), data.Username.ValueString())
 	if err != nil {
@@ -232,9 +231,9 @@ func (data *PGUserResourceModel) UpdateResource(ctx context.Context, client *exo
 }
 
 func (data *PGUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForUsers(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *exoscale.DBAASServicePG) bool { return len(t.Users) > 0 })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *exoscale.DBAASServicePG) bool { return len(t.Users) > 0 })
 	if err != nil {
-		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service Opensearch %s", err.Error()))
+		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service PG %s", err.Error()))
 	}
 }
 

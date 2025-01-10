@@ -73,23 +73,23 @@ func (r *KafkaUserResource) Schema(ctx context.Context, req resource.SchemaReque
 
 func (r *KafkaUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data KafkaUserResourceModel
-	UserRead(ctx, req, resp, &data, r.client)
+	ReadResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *KafkaUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 
 	var data KafkaUserResourceModel
-	UserCreate(ctx, req, resp, &data, r.client)
+	CreateResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *KafkaUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var stateData, planData KafkaUserResourceModel
-	UserUpdate(ctx, req, resp, &stateData, &planData, r.client)
+	UpdateResource(ctx, req, resp, &stateData, &planData, r.client)
 }
 
 func (r *KafkaUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data KafkaUserResourceModel
-	UserDelete(ctx, req, resp, &data, r.client)
+	DeleteResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *KafkaUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -137,7 +137,7 @@ func (r *KafkaUserResource) ImportState(ctx context.Context, req resource.Import
 	data.Service = types.StringValue(serviceName)
 	data.Zone = types.StringValue(zone)
 
-	UserReadForImport(ctx, req, resp, &data, r.client)
+	ReadResourceForImport(ctx, req, resp, &data, r.client)
 
 }
 
@@ -184,7 +184,7 @@ func (data *KafkaUserResourceModel) CreateResource(ctx context.Context, client *
 	diagnostics.AddError("Client Error", "Unable to find newly created user for the service")
 }
 
-func (data *KafkaUserResourceModel) Delete(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *KafkaUserResourceModel) DeleteResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
 
 	op, err := client.DeleteDBAASKafkaUser(ctx, data.Service.ValueString(), data.Username.ValueString())
 	if err != nil {
@@ -233,7 +233,7 @@ func (data *KafkaUserResourceModel) UpdateResource(ctx context.Context, client *
 }
 
 func (data *KafkaUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForUsers(ctx, client.GetDBAASServiceKafka, data.Service.ValueString(), func(t *exoscale.DBAASServiceKafka) bool { return len(t.Users) > 0 })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServiceKafka, data.Service.ValueString(), func(t *exoscale.DBAASServiceKafka) bool { return len(t.Users) > 0 })
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service Kafka %s", err.Error()))
 	}

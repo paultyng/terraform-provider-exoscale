@@ -73,22 +73,22 @@ func (r *MysqlUserResource) Schema(ctx context.Context, req resource.SchemaReque
 
 func (r *MysqlUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data MysqlUserResourceModel
-	UserRead(ctx, req, resp, &data, r.client)
+	ReadResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *MysqlUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data MysqlUserResourceModel
-	UserCreate(ctx, req, resp, &data, r.client)
+	CreateResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *MysqlUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var stateData, planData MysqlUserResourceModel
-	UserUpdate(ctx, req, resp, &stateData, &planData, r.client)
+	UpdateResource(ctx, req, resp, &stateData, &planData, r.client)
 }
 
 func (r *MysqlUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data MysqlUserResourceModel
-	UserDelete(ctx, req, resp, &data, r.client)
+	DeleteResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *MysqlUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -136,7 +136,7 @@ func (r *MysqlUserResource) ImportState(ctx context.Context, req resource.Import
 	data.Service = types.StringValue(serviceName)
 	data.Zone = types.StringValue(zone)
 
-	UserReadForImport(ctx, req, resp, &data, r.client)
+	ReadResourceForImport(ctx, req, resp, &data, r.client)
 
 }
 
@@ -186,7 +186,7 @@ func (data *MysqlUserResourceModel) CreateResource(ctx context.Context, client *
 	diagnostics.AddError("Client Error", "Unable to find newly created user for the service")
 }
 
-func (data *MysqlUserResourceModel) Delete(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *MysqlUserResourceModel) DeleteResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
 
 	op, err := client.DeleteDBAASMysqlUser(ctx, data.Service.ValueString(), data.Username.ValueString())
 	if err != nil {
@@ -233,7 +233,7 @@ func (data *MysqlUserResourceModel) UpdateResource(ctx context.Context, client *
 }
 
 func (data *MysqlUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForUsers(ctx, client.GetDBAASServiceMysql, data.Service.ValueString(), func(t *exoscale.DBAASServiceMysql) bool { return t.State == exoscale.EnumServiceStateRunning })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServiceMysql, data.Service.ValueString(), func(t *exoscale.DBAASServiceMysql) bool { return t.State == exoscale.EnumServiceStateRunning })
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service MySQL %s", err.Error()))
 	}
