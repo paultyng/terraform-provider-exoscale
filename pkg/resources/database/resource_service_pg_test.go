@@ -51,6 +51,14 @@ type TemplateModelPgUser struct {
 	Zone     string
 }
 
+type TemplateModelPgDb struct {
+	ResourceName string
+
+	DatabaseName string
+	Service      string
+	Zone         string
+}
+
 func testResourcePg(t *testing.T) {
 	serviceTpl, err := template.ParseFiles("testdata/resource_pg.tmpl")
 	if err != nil {
@@ -60,8 +68,12 @@ func testResourcePg(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	dbTpl, err := template.ParseFiles("testdata/resource_database_pg.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	serviceFullResourceName := "exoscale_database.test"
+	serviceFullResourceName := "exoscale_dbaas.test"
 	serviceDataBase := TemplateModelPg{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),
@@ -79,6 +91,14 @@ func testResourcePg(t *testing.T) {
 		Service:      fmt.Sprintf("%s.name", serviceFullResourceName),
 	}
 
+	dbFullResourceName := "exoscale_dbaas_pg_database.test_database"
+	dbDataBase := TemplateModelPgDb{
+		ResourceName: "test_database",
+		DatabaseName: "foo_db",
+		Zone:         serviceDataBase.Zone,
+		Service:      fmt.Sprintf("%s.name", serviceFullResourceName),
+	}
+
 	serviceDataCreate := serviceDataBase
 	serviceDataCreate.MaintenanceDow = "monday"
 	serviceDataCreate.MaintenanceTime = "01:23:00"
@@ -88,6 +108,7 @@ func testResourcePg(t *testing.T) {
 	serviceDataCreate.PgbouncerSettings = strconv.Quote(`{"min_pool_size":10}`)
 
 	userDataCreate := userDataBase
+	dbDataCreate := dbDataBase
 
 	buf := &bytes.Buffer{}
 	err = serviceTpl.Execute(buf, &serviceDataCreate)
@@ -95,6 +116,10 @@ func testResourcePg(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = userTpl.Execute(buf, &userDataCreate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = dbTpl.Execute(buf, &dbDataCreate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,12 +137,19 @@ func testResourcePg(t *testing.T) {
 	userDataUpdate := userDataBase
 	userDataUpdate.Username = "bar"
 
+	dbDataUpdate := dbDataBase
+	dbDataUpdate.DatabaseName = "bar_db"
+
 	buf = &bytes.Buffer{}
 	err = serviceTpl.Execute(buf, &serviceDataUpdate)
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = userTpl.Execute(buf, &userDataUpdate)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = dbTpl.Execute(buf, &dbDataUpdate)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,6 +191,16 @@ func testResourcePg(t *testing.T) {
 
 						return nil
 					},
+
+					// Database
+					func(s *terraform.State) error {
+						err := CheckExistsPgDatabase(serviceDataBase.Name, dbDataCreate.DatabaseName, &dbDataCreate)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
 				),
 			},
 			{
@@ -191,6 +233,22 @@ func testResourcePg(t *testing.T) {
 
 						return nil
 					},
+
+					// Database
+					func(s *terraform.State) error {
+						// Check the old database was deleted
+						err := CheckExistsPgDatabase(serviceDataBase.Name, dbDataBase.DatabaseName, &dbDataUpdate)
+						if err == nil {
+							return fmt.Errorf("expected to not find database %s", dbDataBase.DatabaseName)
+						}
+
+						// Check the new user exists
+						err = CheckExistsPgDatabase(serviceDataBase.Name, dbDataUpdate.DatabaseName, &dbDataUpdate)
+						if err != nil {
+							return err
+						}
+						return nil
+					},
 				),
 			},
 			{
@@ -210,6 +268,16 @@ func testResourcePg(t *testing.T) {
 				ImportStateIdFunc: func() resource.ImportStateIdFunc {
 					return func(*terraform.State) (string, error) {
 						return fmt.Sprintf("%s/%s@%s", serviceDataBase.Name, userDataUpdate.Username, userDataBase.Zone), nil
+					}
+				}(),
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: dbFullResourceName,
+				ImportStateIdFunc: func() resource.ImportStateIdFunc {
+					return func(*terraform.State) (string, error) {
+						return fmt.Sprintf("%s/%s@%s", serviceDataBase.Name, dbDataUpdate.DatabaseName, dbDataBase.Zone), nil
 					}
 				}(),
 				ImportState:       true,
@@ -300,4 +368,35 @@ func CheckExistsPgUser(service, username string, data *TemplateModelPgUser) erro
 	}
 
 	return fmt.Errorf("could not find user %s for service %s, found %v", username, service, serviceUsernames)
+}
+
+func CheckExistsPgDatabase(service, databaseName string, data *TemplateModelPgDb) error {
+
+	client, err := testutils.APIClient()
+	if err != nil {
+		return err
+	}
+
+	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
+
+	res, err := client.GetDbaasServicePgWithResponse(ctx, oapi.DbaasServiceName(service))
+	if err != nil {
+		return err
+	}
+	if res.StatusCode() != http.StatusOK {
+		return fmt.Errorf("API request error: unexpected status %s", res.Status())
+	}
+	svc := res.JSON200
+
+	serviceDbs := make([]string, 0)
+	if svc.Databases != nil {
+		for _, db := range *svc.Databases {
+			serviceDbs = append(serviceDbs, string(db))
+			if string(db) == databaseName {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("could not find database %s for service %s, found %v", databaseName, service, serviceDbs)
 }

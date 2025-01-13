@@ -18,13 +18,13 @@ import (
 	"github.com/exoscale/terraform-provider-exoscale/pkg/validators"
 )
 
-type ResourceGrafanaModel struct {
+type ResourceRedisModel struct {
 	IpFilter types.Set    `tfsdk:"ip_filter"`
-	Settings types.String `tfsdk:"grafana_settings"`
+	Settings types.String `tfsdk:"redis_settings"`
 }
 
-var ResourceGrafanaSchema = schema.SingleNestedBlock{
-	MarkdownDescription: "*grafana* database service type specific arguments. Structure is documented below.",
+var ResourceRedisSchema = schema.SingleNestedBlock{
+	MarkdownDescription: "*redis* database service type specific arguments. Structure is documented below.",
 	Attributes: map[string]schema.Attribute{
 		"ip_filter": schema.SetAttribute{
 			ElementType:         types.StringType,
@@ -35,36 +35,36 @@ var ResourceGrafanaSchema = schema.SingleNestedBlock{
 				setvalidator.ValueStringsAre(validators.IsCIDRNetworkValidator{Min: 0, Max: 128}),
 			},
 		},
-		"grafana_settings": schema.StringAttribute{
-			MarkdownDescription: "Grafana configuration settings in JSON format (`exo dbaas type show grafana --settings=grafana` for reference).",
+		"redis_settings": schema.StringAttribute{
+			MarkdownDescription: "Redis configuration settings in JSON format (`exo dbaas type show redis --settings=redis` for reference).",
 			Optional:            true,
 			Computed:            true,
 		},
 	},
 }
 
-// createGrafana function handles Grafana specific part of database resource creation logic.
-func (r *Resource) createGrafana(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
-	service := oapi.CreateDbaasServiceGrafanaJSONRequestBody{
+// createRedis function handles Redis specific part of database resource creation logic.
+func (r *ServiceResource) createRedis(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
+	service := oapi.CreateDbaasServiceRedisJSONRequestBody{
 		Plan:                  data.Plan.ValueString(),
 		TerminationProtection: data.TerminationProtection.ValueBoolPointer(),
 	}
 
 	if !data.MaintenanceDOW.IsUnknown() && !data.MaintenanceTime.IsUnknown() {
 		service.Maintenance = &struct {
-			Dow  oapi.CreateDbaasServiceGrafanaJSONBodyMaintenanceDow `json:"dow"`
-			Time string                                               `json:"time"`
+			Dow  oapi.CreateDbaasServiceRedisJSONBodyMaintenanceDow `json:"dow"`
+			Time string                                             `json:"time"`
 		}{
-			Dow:  oapi.CreateDbaasServiceGrafanaJSONBodyMaintenanceDow(data.MaintenanceDOW.ValueString()),
+			Dow:  oapi.CreateDbaasServiceRedisJSONBodyMaintenanceDow(data.MaintenanceDOW.ValueString()),
 			Time: data.MaintenanceTime.ValueString(),
 		}
 	}
 
-	if data.Grafana != nil {
-		if !data.Grafana.IpFilter.IsUnknown() {
+	if data.Redis != nil {
+		if !data.Redis.IpFilter.IsUnknown() {
 			obj := []string{}
-			if len(data.Grafana.IpFilter.Elements()) > 0 {
-				dg := data.Grafana.IpFilter.ElementsAs(ctx, &obj, false)
+			if len(data.Redis.IpFilter.Elements()) > 0 {
+				dg := data.Redis.IpFilter.ElementsAs(ctx, &obj, false)
 				if dg.HasError() {
 					diagnostics.Append(dg...)
 					return
@@ -74,8 +74,8 @@ func (r *Resource) createGrafana(ctx context.Context, data *ResourceModel, diagn
 			service.IpFilter = &obj
 		}
 
-		if !data.Grafana.Settings.IsUnknown() {
-			settingsSchema, err := r.client.GetDbaasSettingsGrafanaWithResponse(ctx)
+		if !data.Redis.Settings.IsUnknown() {
+			settingsSchema, err := r.client.GetDbaasSettingsRedisWithResponse(ctx)
 			if err != nil {
 				diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database settings schema, got error: %s", err))
 				return
@@ -84,35 +84,36 @@ func (r *Resource) createGrafana(ctx context.Context, data *ResourceModel, diagn
 				diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database settings schema, unexpected status: %s", settingsSchema.Status()))
 				return
 			}
-			obj, err := validateSettings(data.Grafana.Settings.ValueString(), settingsSchema.JSON200.Settings.Grafana)
+
+			obj, err := validateSettings(data.Redis.Settings.ValueString(), settingsSchema.JSON200.Settings.Redis)
 			if err != nil {
 				diagnostics.AddError("Validation error", fmt.Sprintf("invalid settings: %s", err))
 				return
 			}
-			service.GrafanaSettings = &obj
+			service.RedisSettings = &obj
 		}
 	}
 
-	res, err := r.client.CreateDbaasServiceGrafanaWithResponse(
+	res, err := r.client.CreateDbaasServiceRedisWithResponse(
 		ctx,
 		oapi.DbaasServiceName(data.Name.ValueString()),
 		service,
 	)
 	if err != nil {
-		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service grafana, got error: %s", err))
+		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service redis, got error: %s", err))
 		return
 	}
 	if res.StatusCode() != http.StatusOK {
-		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service grafana, unexpected status: %s", res.Status()))
+		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service redis, unexpected status: %s", res.Status()))
 		return
 	}
 
-	r.readGrafana(ctx, data, diagnostics)
+	r.readRedis(ctx, data, diagnostics)
 }
 
-// readGrafana function handles Grafana specific part of database resource Read logic.
+// readRedis function handles Redis specific part of database resource Read logic.
 // It is used in the dedicated Read action but also as a finishing step of Create, Update and Import.
-func (r *Resource) readGrafana(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) readRedis(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	caCert, err := r.client.GetDatabaseCACertificate(ctx, data.Zone.ValueString())
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get CA Certificate: %s", err))
@@ -120,13 +121,13 @@ func (r *Resource) readGrafana(ctx context.Context, data *ResourceModel, diagnos
 	}
 	data.CA = types.StringValue(caCert)
 
-	res, err := r.client.GetDbaasServiceGrafanaWithResponse(ctx, oapi.DbaasServiceName(data.Id.ValueString()))
+	res, err := r.client.GetDbaasServiceRedisWithResponse(ctx, oapi.DbaasServiceName(data.Id.ValueString()))
 	if err != nil {
-		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database service grafana, got error: %s", err))
+		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database service redis, got error: %s", err))
 		return
 	}
 	if res.StatusCode() != http.StatusOK {
-		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database service grafana, unexpected status: %s", res.Status()))
+		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database service redis, unexpected status: %s", res.Status()))
 		return
 	}
 
@@ -147,16 +148,13 @@ func (r *Resource) readGrafana(ctx context.Context, data *ResourceModel, diagnos
 		data.MaintenanceDOW = types.StringValue(string(apiService.Maintenance.Dow))
 		data.MaintenanceTime = types.StringValue(apiService.Maintenance.Time)
 	}
-	if data.Plan.IsNull() || data.Plan.IsUnknown() {
-		data.Plan = types.StringValue(apiService.Plan)
-	}
 
 	// Database block is required but it may be nil during import.
-	if data.Grafana == nil {
-		data.Grafana = &ResourceGrafanaModel{}
+	if data.Redis == nil {
+		data.Redis = &ResourceRedisModel{}
 	}
 
-	data.Grafana.IpFilter = types.SetNull(types.StringType)
+	data.Redis.IpFilter = types.SetNull(types.StringType)
 	if apiService.IpFilter != nil {
 		v, dg := types.SetValueFrom(ctx, types.StringType, *apiService.IpFilter)
 		if dg.HasError() {
@@ -164,33 +162,33 @@ func (r *Resource) readGrafana(ctx context.Context, data *ResourceModel, diagnos
 			return
 		}
 
-		data.Grafana.IpFilter = v
+		data.Redis.IpFilter = v
 	}
 
-	data.Grafana.Settings = types.StringNull()
-	if apiService.GrafanaSettings != nil {
-		settings, err := json.Marshal(*apiService.GrafanaSettings)
+	data.Redis.Settings = types.StringNull()
+	if apiService.RedisSettings != nil {
+		settings, err := json.Marshal(*apiService.RedisSettings)
 		if err != nil {
 			diagnostics.AddError("Validation error", fmt.Sprintf("invalid settings: %s", err))
 			return
 		}
-		data.Grafana.Settings = types.StringValue(string(settings))
+		data.Redis.Settings = types.StringValue(string(settings))
 	}
 }
 
-// updateGrafana function handles Grafana specific part of database resource Update logic.
-func (r *Resource) updateGrafana(ctx context.Context, stateData *ResourceModel, planData *ResourceModel, diagnostics *diag.Diagnostics) {
+// updateRedis function handles Redis specific part of database resource Update logic.
+func (r *ServiceResource) updateRedis(ctx context.Context, stateData *ServiceResourceModel, planData *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	var updated bool
 
-	service := oapi.UpdateDbaasServiceGrafanaJSONRequestBody{}
+	service := oapi.UpdateDbaasServiceRedisJSONRequestBody{}
 
 	if (!planData.MaintenanceDOW.Equal(stateData.MaintenanceDOW) && !planData.MaintenanceDOW.IsUnknown()) ||
 		(!planData.MaintenanceTime.Equal(stateData.MaintenanceTime) && !planData.MaintenanceTime.IsUnknown()) {
 		service.Maintenance = &struct {
-			Dow  oapi.UpdateDbaasServiceGrafanaJSONBodyMaintenanceDow `json:"dow"`
-			Time string                                               `json:"time"`
+			Dow  oapi.UpdateDbaasServiceRedisJSONBodyMaintenanceDow `json:"dow"`
+			Time string                                             `json:"time"`
 		}{
-			Dow:  oapi.UpdateDbaasServiceGrafanaJSONBodyMaintenanceDow(planData.MaintenanceDOW.ValueString()),
+			Dow:  oapi.UpdateDbaasServiceRedisJSONBodyMaintenanceDow(planData.MaintenanceDOW.ValueString()),
 			Time: planData.MaintenanceTime.ValueString(),
 		}
 		updated = true
@@ -206,15 +204,15 @@ func (r *Resource) updateGrafana(ctx context.Context, stateData *ResourceModel, 
 		updated = true
 	}
 
-	if planData.Grafana != nil {
-		if stateData.Grafana == nil {
-			stateData.Grafana = &ResourceGrafanaModel{}
+	if planData.Redis != nil {
+		if stateData.Redis == nil {
+			stateData.Redis = &ResourceRedisModel{}
 		}
 
-		if !planData.Grafana.IpFilter.Equal(stateData.Grafana.IpFilter) {
+		if !planData.Redis.IpFilter.Equal(stateData.Redis.IpFilter) {
 			obj := []string{}
-			if len(planData.Grafana.IpFilter.Elements()) > 0 {
-				dg := planData.Grafana.IpFilter.ElementsAs(ctx, &obj, false)
+			if len(planData.Redis.IpFilter.Elements()) > 0 {
+				dg := planData.Redis.IpFilter.ElementsAs(ctx, &obj, false)
 				if dg.HasError() {
 					diagnostics.Append(dg...)
 					return
@@ -224,8 +222,8 @@ func (r *Resource) updateGrafana(ctx context.Context, stateData *ResourceModel, 
 			updated = true
 		}
 
-		if !planData.Grafana.Settings.Equal(stateData.Grafana.Settings) {
-			settingsSchema, err := r.client.GetDbaasSettingsGrafanaWithResponse(ctx)
+		if !planData.Redis.Settings.Equal(stateData.Redis.Settings) {
+			settingsSchema, err := r.client.GetDbaasSettingsRedisWithResponse(ctx)
 			if err != nil {
 				diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read database settings schema, got error: %s", err))
 				return
@@ -235,13 +233,13 @@ func (r *Resource) updateGrafana(ctx context.Context, stateData *ResourceModel, 
 				return
 			}
 
-			if planData.Grafana.Settings.ValueString() != "" {
-				obj, err := validateSettings(planData.Grafana.Settings.ValueString(), settingsSchema.JSON200.Settings.Grafana)
+			if planData.Redis.Settings.ValueString() != "" {
+				obj, err := validateSettings(planData.Redis.Settings.ValueString(), settingsSchema.JSON200.Settings.Redis)
 				if err != nil {
-					diagnostics.AddError("Validation error", fmt.Sprintf("invalid Grafana settings: %s", err))
+					diagnostics.AddError("Validation error", fmt.Sprintf("invalid Redis settings: %s", err))
 					return
 				}
-				service.GrafanaSettings = &obj
+				service.RedisSettings = &obj
 			}
 			updated = true
 		}
@@ -250,20 +248,20 @@ func (r *Resource) updateGrafana(ctx context.Context, stateData *ResourceModel, 
 	if !updated {
 		tflog.Info(ctx, "no updates detected", map[string]interface{}{})
 	} else {
-		res, err := r.client.UpdateDbaasServiceGrafanaWithResponse(
+		res, err := r.client.UpdateDbaasServiceRedisWithResponse(
 			ctx,
 			oapi.DbaasServiceName(planData.Id.ValueString()),
 			service,
 		)
 		if err != nil {
-			diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update database service grafana, got error: %s", err))
+			diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service redis, got error: %s", err))
 			return
 		}
 		if res.StatusCode() != http.StatusOK {
-			diagnostics.AddError("Client Error", fmt.Sprintf("Unable to update database service grafana, unexpected status: %s", res.Status()))
+			diagnostics.AddError("Client Error", fmt.Sprintf("Unable to create database service redis, unexpected status: %s", res.Status()))
 			return
 		}
 	}
 
-	r.readGrafana(ctx, planData, diagnostics)
+	r.readRedis(ctx, planData, diagnostics)
 }

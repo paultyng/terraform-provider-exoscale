@@ -1,0 +1,5 @@
+resource "exoscale_dbaas_mysql_database" {{ .ResourceName }} {
+  database_name = "{{ .DatabaseName }}"
+  service = {{ .Service }}
+  zone = "{{ .Zone }}"
+}

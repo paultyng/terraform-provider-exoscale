@@ -159,7 +159,7 @@ var ResourceOpensearchSchema = schema.SingleNestedBlock{
 }
 
 // createOpensearch function handles OpenSearch specific part of database resource creation logic.
-func (r *Resource) createOpensearch(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) createOpensearch(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	if data.Opensearch == nil {
 		data.Opensearch = &ResourceOpensearchModel{}
 	}
@@ -303,7 +303,7 @@ func (r *Resource) createOpensearch(ctx context.Context, data *ResourceModel, di
 // readOpensearch function handles OpenSearch specific part of database resource Read logic.
 // It is used in the dedicated Read action but also as a finishing step of Create, Update and Import.
 // NOTE: For optional but not computed attributes we only read remote value if they are defined in the plan.
-func (r *Resource) readOpensearch(ctx context.Context, data *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) readOpensearch(ctx context.Context, data *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	caCert, err := r.client.GetDatabaseCACertificate(ctx, data.Zone.ValueString())
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to get CA Certificate: %s", err))
@@ -430,7 +430,7 @@ func (r *Resource) readOpensearch(ctx context.Context, data *ResourceModel, diag
 }
 
 // updateOpensearch function handles OpenSearch specific part of database resource Update logic.
-func (r *Resource) updateOpensearch(ctx context.Context, stateData *ResourceModel, planData *ResourceModel, diagnostics *diag.Diagnostics) {
+func (r *ServiceResource) updateOpensearch(ctx context.Context, stateData *ServiceResourceModel, planData *ServiceResourceModel, diagnostics *diag.Diagnostics) {
 	var updated bool
 
 	service := oapi.UpdateDbaasServiceOpensearchJSONRequestBody{}

@@ -5,7 +5,7 @@ description: |-
   Fetch Exoscale Database https://community.exoscale.com/documentation/dbaas/ connection URI data.
   This data source returns database conection details of the default (admin) user only.
   URI parts are also available individually for convenience.
-  Corresponding resource: exoscale_database ../resources/database.md.
+  Corresponding resource: exoscale_dbaas ../resources/database.md.
 ---
 
 # exoscale_database_uri (Data Source)

@@ -82,7 +82,7 @@ func testResourceOpensearch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serviceFullResourceName := "exoscale_database.test"
+	serviceFullResourceName := "exoscale_dbaas.test"
 	serviceDataBase := TemplateModelOpensearch{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),

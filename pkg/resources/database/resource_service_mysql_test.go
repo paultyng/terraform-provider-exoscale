@@ -23,7 +23,7 @@ import (
 	"github.com/exoscale/terraform-provider-exoscale/pkg/testutils"
 )
 
-type TemplateModelKafka struct {
+type TemplateModelMysql struct {
 	ResourceName string
 
 	Name string
@@ -34,20 +34,15 @@ type TemplateModelKafka struct {
 	MaintenanceTime       string
 	TerminationProtection bool
 
-	EnableCertAuth         bool
-	EnableKafkaConnect     bool
-	EnableKafkaREST        bool
-	EnableSASLAuth         bool
-	EnableSchemaRegistry   bool
-	IpFilter               []string
-	KafkaSettings          string
-	ConnectSettings        string
-	RestSettings           string
-	SchemaRegistrySettings string
-	Version                string
+	AdminPassword  string
+	AdminUsername  string
+	BackupSchedule string
+	IpFilter       []string
+	MysqlSettings  string
+	Version        string
 }
 
-type TemplateModelKafkaUser struct {
+type TemplateModelMysqlUser struct {
 	ResourceName string
 
 	Username string
@@ -57,47 +52,67 @@ type TemplateModelKafkaUser struct {
 	Type     string
 	Password string
 
-	AccessKey        string
-	AccessCert       string
-	AccessCertExpiry string
+	Authentication string
 }
 
-func testResourceKafka(t *testing.T) {
-	serviceTpl, err := template.ParseFiles("testdata/resource_kafka.tmpl")
+type TemplateModelMysqlDb struct {
+	ResourceName string
+
+	DatabaseName string
+	Service      string
+	Zone         string
+}
+
+func testResourceMysql(t *testing.T) {
+	serviceTpl, err := template.ParseFiles("testdata/resource_mysql.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	userTpl, err := template.ParseFiles("testdata/resource_user_kafka.tmpl")
+	userTpl, err := template.ParseFiles("testdata/resource_user_mysql.tmpl")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dbTpl, err := template.ParseFiles("testdata/resource_database_mysql.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	serviceFullResourceName := "exoscale_database.test"
-	serviceDataBase := TemplateModelKafka{
+	serviceFullResourceName := "exoscale_dbaas.test"
+	serviceDataBase := TemplateModelMysql{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),
-		Plan:                  "business-4",
+		Plan:                  "hobbyist-2",
 		Zone:                  testutils.TestZoneName,
 		TerminationProtection: false,
-		Version:               "3.7",
+		Version:               "8",
 	}
 
-	userFullResourceName := "exoscale_dbaas_kafka_user.test_user"
-	userDataBase := TemplateModelKafkaUser{
+	userFullResourceName := "exoscale_dbaas_mysql_user.test_user"
+	userDataBase := TemplateModelMysqlUser{
 		ResourceName: "test_user",
 		Username:     "foo",
 		Zone:         serviceDataBase.Zone,
 		Service:      fmt.Sprintf("%s.name", serviceFullResourceName),
 	}
 
+	dbFullResourceName := "exoscale_dbaas_mysql_database.test_database"
+	dbDataBase := TemplateModelMysqlDb{
+		ResourceName: "test_database",
+		DatabaseName: "foo_db",
+		Zone:         serviceDataBase.Zone,
+		Service:      fmt.Sprintf("%s.name", serviceFullResourceName),
+	}
 	serviceDataCreate := serviceDataBase
 	serviceDataCreate.MaintenanceDow = "monday"
 	serviceDataCreate.MaintenanceTime = "01:23:00"
-	serviceDataCreate.EnableCertAuth = true
+	serviceDataCreate.BackupSchedule = "01:23"
 	serviceDataCreate.IpFilter = []string{"1.2.3.4/32"}
-	serviceDataCreate.KafkaSettings = strconv.Quote(`{"num_partitions":10}`)
+	serviceDataCreate.MysqlSettings = strconv.Quote(`{"log_output":"INSIGHTS","long_query_time":1,"slow_query_log":true,"sql_mode":"ANSI,TRADITIONAL","sql_require_primary_key":true}`)
 
 	userDataCreate := userDataBase
+	userDataCreate.Authentication = "caching_sha2_password"
+
+	dbDataCreate := dbDataBase
 
 	buf := &bytes.Buffer{}
 	err = serviceTpl.Execute(buf, &serviceDataCreate)
@@ -108,22 +123,24 @@ func testResourceKafka(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = dbTpl.Execute(buf, &dbDataCreate)
+	if err != nil {
+		t.Fatal(err)
+	}
 	configCreate := buf.String()
 
 	serviceDataUpdate := serviceDataBase
 	serviceDataUpdate.MaintenanceDow = "tuesday"
 	serviceDataUpdate.MaintenanceTime = "02:34:00"
-	serviceDataUpdate.EnableCertAuth = false
-	serviceDataUpdate.EnableSASLAuth = true
-	serviceDataUpdate.EnableKafkaREST = true
-	serviceDataUpdate.EnableKafkaConnect = true
+	serviceDataUpdate.BackupSchedule = "23:45"
 	serviceDataUpdate.IpFilter = nil
-	serviceDataUpdate.KafkaSettings = strconv.Quote(`{"compression_type":"gzip","num_partitions":10}`)
-	serviceDataUpdate.RestSettings = strconv.Quote(`{"consumer_request_max_bytes":100000}`)
-	serviceDataUpdate.ConnectSettings = strconv.Quote(`{"session_timeout_ms":6000}`)
+	serviceDataUpdate.MysqlSettings = strconv.Quote(`{"log_output":"INSIGHTS","long_query_time":5,"slow_query_log":true,"sql_mode":"ANSI,TRADITIONAL","sql_require_primary_key":true}`)
 
 	userDataUpdate := userDataBase
-	userDataUpdate.Username = "bar"
+	userDataUpdate.Authentication = "mysql_native_password"
+
+	dbDataUpdate := dbDataBase
+	dbDataUpdate.DatabaseName = "bar_db"
 
 	buf = &bytes.Buffer{}
 	err = serviceTpl.Execute(buf, &serviceDataUpdate)
@@ -134,11 +151,15 @@ func testResourceKafka(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	err = dbTpl.Execute(buf, &dbDataUpdate)
+	if err != nil {
+		t.Fatal(err)
+	}
 	configUpdate := buf.String()
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testutils.AccPreCheck(t) },
-		CheckDestroy:             CheckServiceDestroy("kafka", serviceDataBase.Name),
+		CheckDestroy:             CheckServiceDestroy("mysql", serviceDataBase.Name),
 		ProtoV6ProviderFactories: testutils.TestAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -154,7 +175,7 @@ func testResourceKafka(t *testing.T) {
 					resource.TestCheckResourceAttrSet(serviceFullResourceName, "ca_certificate"),
 					resource.TestCheckResourceAttrSet(serviceFullResourceName, "updated_at"),
 					func(s *terraform.State) error {
-						err := CheckExistsKafka(serviceDataBase.Name, &serviceDataCreate)
+						err := CheckExistsMysql(serviceDataBase.Name, &serviceDataCreate)
 						if err != nil {
 							return err
 						}
@@ -165,11 +186,19 @@ func testResourceKafka(t *testing.T) {
 					// User
 					resource.TestCheckResourceAttrSet(userFullResourceName, "password"),
 					resource.TestCheckResourceAttrSet(userFullResourceName, "type"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_key"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_cert"),
-					resource.TestCheckResourceAttrSet(userFullResourceName, "access_cert_expiry"),
+					resource.TestCheckResourceAttrSet(userFullResourceName, "authentication"),
 					func(s *terraform.State) error {
-						err := CheckExistsKafkaUser(serviceDataBase.Name, userDataBase.Username, &userDataCreate)
+						err := CheckExistsMysqlUser(serviceDataBase.Name, userDataBase.Username, &userDataCreate)
+						if err != nil {
+							return err
+						}
+
+						return nil
+					},
+
+					// Database
+					func(s *terraform.State) error {
+						err := CheckExistsMysqlDatabase(serviceDataBase.Name, dbDataCreate.DatabaseName, &dbDataCreate)
 						if err != nil {
 							return err
 						}
@@ -184,7 +213,7 @@ func testResourceKafka(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					// Service
 					func(s *terraform.State) error {
-						err := CheckExistsKafka(serviceDataBase.Name, &serviceDataUpdate)
+						err := CheckExistsMysql(serviceDataBase.Name, &serviceDataUpdate)
 						if err != nil {
 							return err
 						}
@@ -194,20 +223,30 @@ func testResourceKafka(t *testing.T) {
 
 					// User
 					func(s *terraform.State) error {
-						// Check the old user was deleted
-						err := CheckExistsKafkaUser(serviceDataBase.Name, userDataBase.Username, &userDataUpdate)
-						if err == nil {
-							return fmt.Errorf("expected to not find user %s", userDataBase.Username)
-						}
-
 						// Check the new user exists
-						err = CheckExistsKafkaUser(serviceDataBase.Name, userDataUpdate.Username, &userDataUpdate)
+						err = CheckExistsMysqlUser(serviceDataBase.Name, userDataUpdate.Username, &userDataUpdate)
 						if err != nil {
 							return err
 						}
 
 						return nil
 
+					},
+
+					// Database
+					func(s *terraform.State) error {
+						// Check the old database was deleted
+						err := CheckExistsMysqlDatabase(serviceDataBase.Name, dbDataBase.DatabaseName, &dbDataUpdate)
+						if err == nil {
+							return fmt.Errorf("expected to not find database %s", dbDataBase.DatabaseName)
+						}
+
+						// Check the new user exists
+						err = CheckExistsMysqlDatabase(serviceDataBase.Name, dbDataUpdate.DatabaseName, &dbDataUpdate)
+						if err != nil {
+							return err
+						}
+						return nil
 					},
 				),
 			},
@@ -227,7 +266,17 @@ func testResourceKafka(t *testing.T) {
 				ResourceName: userFullResourceName,
 				ImportStateIdFunc: func() resource.ImportStateIdFunc {
 					return func(*terraform.State) (string, error) {
-						return fmt.Sprintf("%s/%s@%s", serviceDataBase.Name, userDataUpdate.Username, userDataBase.Zone), nil
+						return fmt.Sprintf("%s/%s@%s", serviceDataBase.Name, userDataBase.Username, userDataBase.Zone), nil
+					}
+				}(),
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
+			{
+				ResourceName: dbFullResourceName,
+				ImportStateIdFunc: func() resource.ImportStateIdFunc {
+					return func(*terraform.State) (string, error) {
+						return fmt.Sprintf("%s/%s@%s", serviceDataBase.Name, dbDataUpdate.DatabaseName, dbDataBase.Zone), nil
 					}
 				}(),
 				ImportState:       true,
@@ -237,7 +286,7 @@ func testResourceKafka(t *testing.T) {
 	})
 }
 
-func CheckExistsKafka(name string, data *TemplateModelKafka) error {
+func CheckExistsMysql(name string, data *TemplateModelMysql) error {
 	client, err := testutils.APIClient()
 	if err != nil {
 		return err
@@ -245,7 +294,7 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 
 	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
 
-	res, err := client.GetDbaasServiceKafkaWithResponse(ctx, oapi.DbaasServiceName(name))
+	res, err := client.GetDbaasServiceMysqlWithResponse(ctx, oapi.DbaasServiceName(name))
 	if err != nil {
 		return err
 	}
@@ -258,45 +307,29 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 		return fmt.Errorf("plan: expected %q, got %q", data.Plan, service.Plan)
 	}
 
+	if v := fmt.Sprintf("%02d:%02d", *service.BackupSchedule.BackupHour, *service.BackupSchedule.BackupMinute); data.BackupSchedule != v {
+		return fmt.Errorf("backup_schedule: expected %q, got %q", data.BackupSchedule, v)
+	}
+
 	if *service.TerminationProtection != false {
 		return fmt.Errorf("termination_protection: expected false, got true")
 	}
 
 	if !cmp.Equal(data.IpFilter, *service.IpFilter, cmpopts.EquateEmpty()) {
-		return fmt.Errorf("kafka.ip_filter: expected %q, got %q", data.IpFilter, *service.IpFilter)
+		return fmt.Errorf("mysql.ip_filter: expected %q, got %q", data.IpFilter, *service.IpFilter)
 	}
 
 	if v := string(service.Maintenance.Dow); data.MaintenanceDow != v {
-		return fmt.Errorf("kafka.maintenance_dow: expected %q, got %q", data.MaintenanceDow, v)
+		return fmt.Errorf("mysql.maintenance_dow: expected %q, got %q", data.MaintenanceDow, v)
 	}
 
 	if data.MaintenanceTime != service.Maintenance.Time {
-		return fmt.Errorf("kafka.maintenance_time: expected %q, got %q", data.MaintenanceTime, service.Maintenance.Time)
+		return fmt.Errorf("mysql.maintenance_time: expected %q, got %q", data.MaintenanceTime, service.Maintenance.Time)
 	}
 
-	if data.EnableKafkaConnect != *service.KafkaConnectEnabled {
-		return fmt.Errorf("kafka.enable_kafka_connect: expected %v, got %v", data.EnableKafkaConnect, *service.KafkaConnectEnabled)
-	}
-
-	if data.EnableKafkaREST != *service.KafkaRestEnabled {
-		return fmt.Errorf("kafka.enable_kafka_rest: expected %v, got %v", data.EnableKafkaREST, *service.KafkaRestEnabled)
-	}
-
-	if data.EnableSchemaRegistry != *service.SchemaRegistryEnabled {
-		return fmt.Errorf("kafka.enable_schema_registry: expected %v, got %v", data.EnableSchemaRegistry, *service.SchemaRegistryEnabled)
-	}
-
-	if data.EnableCertAuth != *service.AuthenticationMethods.Certificate {
-		return fmt.Errorf("kafka.enable_cert_auth: expected %v, got %v", data.EnableCertAuth, *service.AuthenticationMethods.Certificate)
-	}
-
-	if data.EnableSASLAuth != *service.AuthenticationMethods.Sasl {
-		return fmt.Errorf("kafka.enable_sasl_auth: expected %v, got %v", data.EnableSASLAuth, *service.AuthenticationMethods.Sasl)
-	}
-
-	if data.KafkaSettings != "" {
+	if data.MysqlSettings != "" {
 		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.KafkaSettings)
+		s, err := strconv.Unquote(data.MysqlSettings)
 		if err != nil {
 			return err
 		}
@@ -306,74 +339,22 @@ func CheckExistsKafka(name string, data *TemplateModelKafka) error {
 		}
 		if !cmp.Equal(
 			obj,
-			*service.KafkaSettings,
+			*service.MysqlSettings,
 		) {
-			return fmt.Errorf("kafka.kafka_settings: expected %q, got %q", obj, *service.KafkaSettings)
+			return fmt.Errorf("mysql.mysql_settings: expected %q, got %q", obj, *service.MysqlSettings)
 		}
 	}
 
-	if data.ConnectSettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.ConnectSettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.KafkaConnectSettings,
-		) {
-			return fmt.Errorf("kafka.kafka_connect_settings: expected %q, got %q", obj, *service.KafkaConnectSettings)
-		}
-	}
+	majVersion := strings.Split(*service.Version, ".")[0]
 
-	if data.RestSettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.RestSettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.KafkaRestSettings,
-		) {
-			return fmt.Errorf("kafka.kafka_rest_settings: expected %q, got %q", obj, *service.KafkaRestSettings)
-		}
-	}
-
-	if data.SchemaRegistrySettings != "" {
-		obj := map[string]interface{}{}
-		s, err := strconv.Unquote(data.SchemaRegistrySettings)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal([]byte(s), &obj)
-		if err != nil {
-			return err
-		}
-		if !cmp.Equal(
-			obj,
-			*service.SchemaRegistrySettings,
-		) {
-			return fmt.Errorf("kafka.schema_registry_settings: expected %q, got %q", obj, *service.SchemaRegistrySettings)
-		}
-	}
-
-	if data.Version != *service.Version {
-		return fmt.Errorf("kafka.version: expected %q, got %q", data.Version, *service.Version)
+	if data.Version != majVersion {
+		return fmt.Errorf("mysql.version: expected %q, got %q", data.Version, majVersion)
 	}
 
 	return nil
 }
 
-func CheckExistsKafkaUser(service, username string, data *TemplateModelKafkaUser) error {
+func CheckExistsMysqlUser(service, username string, data *TemplateModelMysqlUser) error {
 
 	client, err := testutils.APIClient()
 	if err != nil {
@@ -382,7 +363,7 @@ func CheckExistsKafkaUser(service, username string, data *TemplateModelKafkaUser
 
 	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
 
-	res, err := client.GetDbaasServiceKafkaWithResponse(ctx, oapi.DbaasServiceName(service))
+	res, err := client.GetDbaasServiceMysqlWithResponse(ctx, oapi.DbaasServiceName(service))
 	if err != nil {
 		return err
 	}
@@ -397,11 +378,45 @@ func CheckExistsKafkaUser(service, username string, data *TemplateModelKafkaUser
 			if u.Username != nil {
 				serviceUsernames = append(serviceUsernames, *u.Username)
 				if *u.Username == username {
-					return nil
+					if *u.Authentication == data.Authentication {
+						return nil
+					}
 				}
 			}
 		}
 	}
 
 	return fmt.Errorf("could not find user %s for service %s, found %v", username, service, serviceUsernames)
+}
+
+func CheckExistsMysqlDatabase(service, databaseName string, data *TemplateModelMysqlDb) error {
+
+	client, err := testutils.APIClient()
+	if err != nil {
+		return err
+	}
+
+	ctx := exoapi.WithEndpoint(context.Background(), exoapi.NewReqEndpoint(testutils.TestEnvironment(), testutils.TestZoneName))
+
+	res, err := client.GetDbaasServiceMysqlWithResponse(ctx, oapi.DbaasServiceName(service))
+	if err != nil {
+		return err
+	}
+	if res.StatusCode() != http.StatusOK {
+		return fmt.Errorf("API request error: unexpected status %s", res.Status())
+	}
+	svc := res.JSON200
+
+	serviceDbs := make([]string, 0)
+	if svc.Databases != nil {
+
+		for _, db := range *svc.Databases {
+			serviceDbs = append(serviceDbs, string(db))
+			if string(db) == databaseName {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("could not find database %s for service %s, found %v", databaseName, service, serviceDbs)
 }

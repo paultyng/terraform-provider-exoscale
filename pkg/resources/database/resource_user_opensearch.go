@@ -55,22 +55,22 @@ func (r *OpensearchUserResource) Schema(ctx context.Context, req resource.Schema
 
 func (r *OpensearchUserResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var data OpensearchUserResourceModel
-	UserRead(ctx, req, resp, &data, r.client)
+	ReadResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *OpensearchUserResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var data OpensearchUserResourceModel
-	UserCreate(ctx, req, resp, &data, r.client)
+	CreateResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *OpensearchUserResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var stateData, planData OpensearchUserResourceModel
-	UserUpdate(ctx, req, resp, &stateData, &planData, r.client)
+	UpdateResource(ctx, req, resp, &stateData, &planData, r.client)
 }
 
 func (r *OpensearchUserResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var data OpensearchUserResourceModel
-	UserDelete(ctx, req, resp, &data, r.client)
+	DeleteResource(ctx, req, resp, &data, r.client)
 }
 
 func (r *OpensearchUserResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -118,7 +118,7 @@ func (r *OpensearchUserResource) ImportState(ctx context.Context, req resource.I
 	data.Service = types.StringValue(serviceName)
 	data.Zone = types.StringValue(zone)
 
-	UserReadForImport(ctx, req, resp, &data, r.client)
+	ReadResourceForImport(ctx, req, resp, &data, r.client)
 
 }
 
@@ -162,7 +162,7 @@ func (data *OpensearchUserResourceModel) CreateResource(ctx context.Context, cli
 	diagnostics.AddError("Client Error", "Unable to find newly created user for the service")
 }
 
-func (data *OpensearchUserResourceModel) Delete(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *OpensearchUserResourceModel) DeleteResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
 
 	op, err := client.DeleteDBAASOpensearchUser(ctx, data.Service.ValueString(), data.Username.ValueString())
 	if err != nil {
@@ -208,7 +208,7 @@ func (data *OpensearchUserResourceModel) UpdateResource(ctx context.Context, cli
 }
 
 func (data *OpensearchUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForUsers(ctx, client.GetDBAASServiceOpensearch, data.Service.ValueString(), func(t *exoscale.DBAASServiceOpensearch) bool { return len(t.Users) > 0 })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServiceOpensearch, data.Service.ValueString(), func(t *exoscale.DBAASServiceOpensearch) bool { return len(t.Users) > 0 })
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service Opensearch %s", err.Error()))
 	}

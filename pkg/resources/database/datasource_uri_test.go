@@ -30,7 +30,7 @@ func testDataSourceURI(t *testing.T) {
 	pgUsername := acctest.RandomWithPrefix(testutils.TestUsername)
 	data := DataSourceURIModel{
 		ResourceName: "test",
-		Name:         "exoscale_database.test.name",
+		Name:         "exoscale_dbaas.test.name",
 		Zone:         testutils.TestZoneName,
 	}
 

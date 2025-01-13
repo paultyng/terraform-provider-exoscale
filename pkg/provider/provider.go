@@ -217,11 +217,14 @@ func (p *ExoscaleProvider) DataSources(ctx context.Context) []func() datasource.
 
 func (p *ExoscaleProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
-		database.NewResource,
+		database.DeprecatedNewResource,
+		database.NewServiceResource,
 		database.NewMysqlUserResource,
 		database.NewKafkaUserResource,
 		database.NewOpensearchUserResource,
 		database.NewPGUserResource,
+		database.NewPGDatabaseResource,
+		database.NewMysqlDatabaseResource,
 		iam.NewResourceOrgPolicy,
 		iam.NewResourceRole,
 		iam.NewResourceAPIKey,

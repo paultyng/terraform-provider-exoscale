@@ -26,21 +26,21 @@ import (
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
-var _ resource.Resource = &Resource{}
-var _ resource.ResourceWithImportState = &Resource{}
+var _ resource.Resource = &ServiceResource{}
+var _ resource.ResourceWithImportState = &ServiceResource{}
 
-func NewResource() resource.Resource {
-	return &Resource{}
+func NewServiceResource() resource.Resource {
+	return &ServiceResource{}
 }
 
-// Resource defines the DBaaS Service resource implementation.
-type Resource struct {
+// ServiceResource defines the DBaaS Service resource implementation.
+type ServiceResource struct {
 	client *exoscale.Client
 	env    string
 }
 
-// ResourceModel describes the generic DBaaS Service resource data model.
-type ResourceModel struct {
+// ServiceResourceModel describes the generic DBaaS Service resource data model.
+type ServiceResourceModel struct {
 	Id                    types.String `tfsdk:"id"`
 	CreatedAt             types.String `tfsdk:"created_at"`
 	DiskSize              types.Int64  `tfsdk:"disk_size"`
@@ -68,11 +68,11 @@ type ResourceModel struct {
 	Timeouts timeouts.Value `tfsdk:"timeouts"`
 }
 
-func (r *Resource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_database"
+func (r *ServiceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	resp.TypeName = req.ProviderTypeName + "_dbaas"
 }
 
-func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (r *ServiceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Manage Exoscale [Database Services (DBaaS)](https://community.exoscale.com/documentation/dbaas/).",
 		Attributes: map[string]schema.Attribute{
@@ -223,7 +223,7 @@ func (r *Resource) Schema(ctx context.Context, req resource.SchemaRequest, resp 
 	}
 }
 
-func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+func (r *ServiceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
 	if req.ProviderData == nil {
 		return
 	}
@@ -232,7 +232,7 @@ func (r *Resource) Configure(ctx context.Context, req resource.ConfigureRequest,
 	r.env = req.ProviderData.(*providerConfig.ExoscaleProviderConfig).Environment
 }
 
-func (r *Resource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+func (r *ServiceResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
 	return map[int64]resource.StateUpgrader{
 		// SDKv2 to Framework migration requires state upgrade in database blocks
 		// to remove array from database blocks.
@@ -326,7 +326,7 @@ func (r *Resource) UpgradeState(ctx context.Context) map[int64]resource.StateUpg
 					return
 				}
 
-				upgradedStateData := ResourceModel{
+				upgradedStateData := ServiceResourceModel{
 					Id:                    priorState.Id,
 					CreatedAt:             priorState.CreatedAt,
 					DiskSize:              priorState.DiskSize,
@@ -370,7 +370,7 @@ func (r *Resource) UpgradeState(ctx context.Context) map[int64]resource.StateUpg
 	}
 }
 
-func (r *Resource) ValidateConfig(
+func (r *ServiceResource) ValidateConfig(
 	ctx context.Context,
 	req resource.ValidateConfigRequest,
 	resp *resource.ValidateConfigResponse,
@@ -402,8 +402,8 @@ func (r *Resource) ValidateConfig(
 	}
 }
 
-func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var data ResourceModel
+func (r *ServiceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	var data ServiceResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &data)...)
@@ -449,8 +449,8 @@ func (r *Resource) Create(ctx context.Context, req resource.CreateRequest, resp 
 	})
 }
 
-func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var data ResourceModel
+func (r *ServiceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	var data ServiceResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -496,8 +496,8 @@ func (r *Resource) Read(ctx context.Context, req resource.ReadRequest, resp *res
 	})
 }
 
-func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var stateData, planData ResourceModel
+func (r *ServiceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var stateData, planData ServiceResourceModel
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &planData)...)
@@ -544,8 +544,8 @@ func (r *Resource) Update(ctx context.Context, req resource.UpdateRequest, resp 
 	})
 }
 
-func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var data ResourceModel
+func (r *ServiceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	var data ServiceResourceModel
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &data)...)
@@ -575,7 +575,7 @@ func (r *Resource) Delete(ctx context.Context, req resource.DeleteRequest, resp 
 	})
 }
 
-func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+func (r *ServiceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	idParts := strings.Split(req.ID, "@")
 
 	if len(idParts) != 2 || idParts[0] == "" || idParts[1] == "" {
@@ -586,7 +586,7 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 		return
 	}
 
-	var data ResourceModel
+	var data ServiceResourceModel
 
 	// Set timeouts (quirk https://github.com/hashicorp/terraform-plugin-framework-timeouts/issues/46)
 	var timeouts timeouts.Value
@@ -622,4 +622,62 @@ func (r *Resource) ImportState(ctx context.Context, req resource.ImportStateRequ
 	tflog.Trace(ctx, "resource imported", map[string]interface{}{
 		"id": data.Id,
 	})
+}
+
+// We're renaming `exoscale_dbaas` to `exoscale_dbaas“
+type DeprecatedServiceResource struct {
+	Resource *ServiceResource
+}
+
+func (d *DeprecatedServiceResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
+	d.Resource.Create(ctx, req, resp)
+}
+
+func (d *DeprecatedServiceResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
+	d.Resource.Delete(ctx, req, resp)
+}
+
+func (d *DeprecatedServiceResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+	d.Resource.Metadata(ctx, req, resp)
+	resp.TypeName = req.ProviderTypeName + "_database"
+}
+
+func (d *DeprecatedServiceResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
+	d.Resource.Read(ctx, req, resp)
+}
+
+func (d *DeprecatedServiceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+	d.Resource.Schema(ctx, req, resp)
+	resp.Schema.DeprecationMessage = "This resource is renamed to exoscale_dbaas, reimport it after renaming it"
+	resp.Schema.MarkdownDescription = "❗This resource is deprecated and renamed to exoscale_dbaas, do not use it to create new resources❗\n" + resp.Schema.MarkdownDescription
+}
+
+func (d *DeprecatedServiceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	d.Resource.Update(ctx, req, resp)
+}
+
+func (r *DeprecatedServiceResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
+	r.Resource.Configure(ctx, req, resp)
+}
+
+func (r *DeprecatedServiceResource) UpgradeState(ctx context.Context) map[int64]resource.StateUpgrader {
+	return r.Resource.UpgradeState(ctx)
+}
+
+func (r *DeprecatedServiceResource) ValidateConfig(
+	ctx context.Context,
+	req resource.ValidateConfigRequest,
+	resp *resource.ValidateConfigResponse,
+) {
+	r.Resource.ValidateConfig(ctx, req, resp)
+}
+
+func (r *DeprecatedServiceResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	r.Resource.ImportState(ctx, req, resp)
+}
+
+func DeprecatedNewResource() resource.Resource {
+	return &DeprecatedServiceResource{
+		Resource: &ServiceResource{},
+	}
 }

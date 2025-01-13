@@ -27,7 +27,7 @@ This data source returns database conection details of the default (admin) user 
 
 URI parts are also available individually for convenience.
 
-Corresponding resource: [exoscale_database](../resources/database.md).`
+Corresponding resource: [exoscale_dbaas](../resources/database.md).`
 
 // Ensure provider defined types fully satisfy framework interfaces.
 var _ datasource.DataSourceWithConfigure = &DataSourceURI{}
@@ -214,12 +214,12 @@ polling:
 	return service, nil
 }
 
-// waitForDBAASServiceReadyForUsers polls the database service until it is ready to accept user creation
-func waitForDBAASServiceReadyForUsers[T any](
+// waitForDBAASServiceReadyForFn polls the database service until dbReady evaluates to true
+func waitForDBAASServiceReadyForFn[T any](
 	ctx context.Context,
 	getService func(context.Context, string) (*T, error),
 	serviceName string,
-	usersReady func(*T) bool,
+	dbReadyFn func(*T) bool,
 ) (*T, error) {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -233,8 +233,8 @@ polling:
 				return nil, fmt.Errorf("error polling service status: %w", err)
 			}
 
-			usersReady := usersReady(service)
-			if usersReady {
+			dbReady := dbReadyFn(service)
+			if dbReady {
 				break polling
 			}
 

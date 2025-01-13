@@ -44,7 +44,7 @@ func testResourceRedis(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	fullResourceName := "exoscale_database.test"
+	fullResourceName := "exoscale_dbaas.test"
 	dataBase := TemplateModelRedis{
 		ResourceName:          "test",
 		Name:                  acctest.RandomWithPrefix(testutils.Prefix),
