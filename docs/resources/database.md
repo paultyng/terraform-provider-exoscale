@@ -3,13 +3,13 @@
 page_title: "exoscale_database Resource - terraform-provider-exoscale"
 subcategory: ""
 description: |-
-  ❗This resource is deprecated and being renamed to exoscale_dbaas, do not use❗
+  ❗This resource is deprecated and renamed to exoscale_dbaas, do not use it to create new resources❗
   Manage Exoscale Database Services (DBaaS) https://community.exoscale.com/documentation/dbaas/.
 ---
 
 # exoscale_database (Resource)
 
-❗This resource is deprecated and being renamed to exoscale_dbaas, do not use❗
+❗This resource is deprecated and renamed to exoscale_dbaas, do not use it to create new resources❗
 Manage Exoscale [Database Services (DBaaS)](https://community.exoscale.com/documentation/dbaas/).
 
 ## Example Usage

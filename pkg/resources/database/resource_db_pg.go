@@ -57,7 +57,7 @@ func (p *PGDatabaseResource) ImportState(ctx context.Context, req resource.Impor
 
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
-			fmt.Sprintf("Expected import identifier with format: service/database_ame@zone. Got: %q", req.ID),
+			fmt.Sprintf("Expected import identifier with format: service/database_name@zone. Got: %q", req.ID),
 		)
 
 		return

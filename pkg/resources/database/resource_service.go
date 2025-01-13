@@ -648,8 +648,8 @@ func (d *DeprecatedServiceResource) Read(ctx context.Context, req resource.ReadR
 
 func (d *DeprecatedServiceResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	d.Resource.Schema(ctx, req, resp)
-	resp.Schema.DeprecationMessage = "This resource is being renamed to exoscale_dbaas, reimport it as such instead"
-	resp.Schema.MarkdownDescription = "❗This resource is deprecated and being renamed to exoscale_dbaas, do not use❗\n" + resp.Schema.MarkdownDescription
+	resp.Schema.DeprecationMessage = "This resource is renamed to exoscale_dbaas, reimport it after renaming it"
+	resp.Schema.MarkdownDescription = "❗This resource is deprecated and renamed to exoscale_dbaas, do not use it to create new resources❗\n" + resp.Schema.MarkdownDescription
 }
 
 func (d *DeprecatedServiceResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
