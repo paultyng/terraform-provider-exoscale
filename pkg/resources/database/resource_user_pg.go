@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	exoscale "github.com/exoscale/egoscale/v3"
+	v3 "github.com/exoscale/egoscale/v3"
 	providerConfig "github.com/exoscale/terraform-provider-exoscale/pkg/provider/config"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -231,7 +233,10 @@ func (data *PGUserResourceModel) UpdateResource(ctx context.Context, client *exo
 }
 
 func (data *PGUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *exoscale.DBAASServicePG) bool { return len(t.Users) > 0 })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *exoscale.DBAASServicePG) bool { return t.State == v3.EnumServiceStateRunning })
+	// DbaaS API is unstable when a service goes from rebuilding from running,
+	// this wait time helps avoid that
+	time.Sleep(time.Second * 10)
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service PG %s", err.Error()))
 	}

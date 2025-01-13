@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -276,7 +277,11 @@ func (PGDatabaseResourceModel) UpdateResource(ctx context.Context, client *v3.Cl
 }
 
 func (data PGDatabaseResourceModel) WaitForService(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *v3.DBAASServicePG) bool { return len(t.Databases) > 0 })
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *v3.DBAASServicePG) bool { return t.State == v3.EnumServiceStateRunning })
+	// DbaaS API is unstable when a service goes from rebuilding from running,
+	// this wait time helps avoid that
+	time.Sleep(time.Second * 10)
+
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service PG %s", err.Error()))
 	}

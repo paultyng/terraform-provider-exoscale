@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	exoscale "github.com/exoscale/egoscale/v3"
 	providerConfig "github.com/exoscale/terraform-provider-exoscale/pkg/provider/config"
@@ -234,6 +235,9 @@ func (data *MysqlUserResourceModel) UpdateResource(ctx context.Context, client *
 
 func (data *MysqlUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
 	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServiceMysql, data.Service.ValueString(), func(t *exoscale.DBAASServiceMysql) bool { return t.State == exoscale.EnumServiceStateRunning })
+	// DbaaS API is unstable when a service goes from rebuilding from running,
+	// this wait time helps avoid that
+	time.Sleep(time.Second * 10)
 	if err != nil {
 		diagnostics.AddError("Client Error", fmt.Sprintf("Unable to read Database service MySQL %s", err.Error()))
 	}
