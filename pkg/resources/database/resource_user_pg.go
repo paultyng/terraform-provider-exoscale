@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	exoscale "github.com/exoscale/egoscale/v3"
 	v3 "github.com/exoscale/egoscale/v3"
 	providerConfig "github.com/exoscale/terraform-provider-exoscale/pkg/provider/config"
 	"github.com/hashicorp/terraform-plugin-framework-timeouts/resource/timeouts"
@@ -137,10 +136,10 @@ func (r *PGUserResource) ImportState(ctx context.Context, req resource.ImportSta
 
 }
 
-func (data *PGUserResourceModel) CreateResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *PGUserResourceModel) CreateResource(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
 
-	createRequest := exoscale.CreateDBAASPostgresUserRequest{
-		Username: exoscale.DBAASUserUsername(data.Username.ValueString()),
+	createRequest := v3.CreateDBAASPostgresUserRequest{
+		Username: v3.DBAASUserUsername(data.Username.ValueString()),
 	}
 
 	if !data.AllowReplication.IsNull() {
@@ -156,7 +155,7 @@ func (data *PGUserResourceModel) CreateResource(ctx context.Context, client *exo
 		return
 	}
 
-	_, err = client.Wait(ctx, op, exoscale.OperationStateSuccess)
+	_, err = client.Wait(ctx, op, v3.OperationStateSuccess)
 	if err != nil {
 		diagnostics.AddError(
 			"Client Error",
@@ -184,7 +183,7 @@ func (data *PGUserResourceModel) CreateResource(ctx context.Context, client *exo
 	diagnostics.AddError("Client Error", "Unable to find newly created user for the service")
 }
 
-func (data *PGUserResourceModel) DeleteResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *PGUserResourceModel) DeleteResource(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
 
 	op, err := client.DeleteDBAASPostgresUser(ctx, data.Service.ValueString(), data.Username.ValueString())
 	if err != nil {
@@ -195,7 +194,7 @@ func (data *PGUserResourceModel) DeleteResource(ctx context.Context, client *exo
 		return
 	}
 
-	_, err = client.Wait(ctx, op, exoscale.OperationStateSuccess)
+	_, err = client.Wait(ctx, op, v3.OperationStateSuccess)
 	if err != nil {
 		diagnostics.AddError(
 			"Client Error",
@@ -206,7 +205,7 @@ func (data *PGUserResourceModel) DeleteResource(ctx context.Context, client *exo
 
 }
 
-func (data *PGUserResourceModel) ReadResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *PGUserResourceModel) ReadResource(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
 
 	svc, err := client.GetDBAASServicePG(ctx, data.Service.ValueString())
 	if err != nil {
@@ -227,13 +226,13 @@ func (data *PGUserResourceModel) ReadResource(ctx context.Context, client *exosc
 	diagnostics.AddError("Client Error", "Unable to read user for the service")
 }
 
-func (data *PGUserResourceModel) UpdateResource(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
+func (data *PGUserResourceModel) UpdateResource(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
 	// Nothing to do here as all fields of this resource are immutable; replaces will be required
 	// automatically
 }
 
-func (data *PGUserResourceModel) WaitForService(ctx context.Context, client *exoscale.Client, diagnostics *diag.Diagnostics) {
-	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *exoscale.DBAASServicePG) bool { return t.State == v3.EnumServiceStateRunning })
+func (data *PGUserResourceModel) WaitForService(ctx context.Context, client *v3.Client, diagnostics *diag.Diagnostics) {
+	_, err := waitForDBAASServiceReadyForFn(ctx, client.GetDBAASServicePG, data.Service.ValueString(), func(t *v3.DBAASServicePG) bool { return t.State == v3.EnumServiceStateRunning })
 	// DbaaS API is unstable when a service goes from rebuilding from running,
 	// this wait time helps avoid that
 	time.Sleep(time.Second * 10)
