@@ -301,3 +301,78 @@ func FindInstanceTypeByNameV3(ctx context.Context, client *exov3.Client, id stri
 
 	return nil, exov3.ErrNotFound
 }
+
+// In the context of converting list of IDs to resources for egoscale V3 update and
+// creation requests, we're using a  lot of inline funcitons, increasing reading complexity
+// when one is called more than once, we should aim to regroup them here.
+func AntiAffiniGroupsToAntiAffinityGroupIDs(aags []exov3.AntiAffinityGroup) (ls []string) {
+	ls = make([]string, len(aags))
+	for i, aag := range aags {
+		ls[i] = aag.ID.String()
+	}
+	return
+}
+
+func AntiAffinityGroupIDsToAntiAffinityGroups(ids []interface{}) (ls []exov3.AntiAffinityGroup) {
+	ls = make([]exov3.AntiAffinityGroup, len(ids))
+	for i, id := range ids {
+		ls[i] = exov3.AntiAffinityGroup{
+			ID: exov3.UUID(id.(string)),
+		}
+	}
+	return
+}
+
+func PrivateNetworksToPrivateNetworkIDs(privnets []exov3.PrivateNetwork) (ls []string) {
+	ls = make([]string, len(privnets))
+	for i, aag := range privnets {
+		ls[i] = aag.ID.String()
+	}
+	return
+}
+
+func PrivateNetworkIDsToPrivateNetworks(ids []interface{}) (ls []exov3.PrivateNetwork) {
+	ls = make([]exov3.PrivateNetwork, len(ids))
+	for i, id := range ids {
+		ls[i] = exov3.PrivateNetwork{
+			ID: exov3.UUID(id.(string)),
+		}
+	}
+	return
+}
+
+func SecurityGroupsToSecurityGroupIDs(sgs []exov3.SecurityGroup) (ls []string) {
+	ls = make([]string, len(sgs))
+	for i, aag := range sgs {
+		ls[i] = aag.ID.String()
+	}
+	return
+}
+
+func SecurityGroupIDsToSecurityGroups(ids []interface{}) (ls []exov3.SecurityGroup) {
+	ls = make([]exov3.SecurityGroup, len(ids))
+	for i, id := range ids {
+		ls[i] = exov3.SecurityGroup{
+			ID: exov3.UUID(id.(string)),
+		}
+	}
+	return
+}
+
+func ElasticIPsToElasticIPIDs(eips []exov3.ElasticIP) (ls []string) {
+	ls = make([]string, len(eips))
+	for i, aag := range eips {
+		ls[i] = aag.ID.String()
+	}
+	return
+}
+
+func ElasticIPIDsToElasticIPs(ids []interface{}) (ls []exov3.ElasticIP) {
+	ls = make([]exov3.ElasticIP, len(ids))
+	for i, id := range ids {
+		ls[i] = exov3.ElasticIP{
+			ID: exov3.UUID(id.(string)),
+		}
+	}
+	return
+}

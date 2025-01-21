@@ -329,81 +329,26 @@ func rCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 
 	if v, ok := d.GetOk(AttrAffinityGroupIDs); ok {
 		if set, ok := v.(*schema.Set); ok {
-			createPoolRequest.AntiAffinityGroups = func() (v []v3.AntiAffinityGroup) {
-				if l := set.Len(); l > 0 {
-					list := make([]v3.AntiAffinityGroup, l)
-					for i, v := range set.List() {
-						list[i] = v3.AntiAffinityGroup{
-							ID: v3.UUID(v.(string)),
-						}
-					}
-					v = list
-				}
-				return
-			}()
+			createPoolRequest.AntiAffinityGroups = utils.AntiAffinityGroupIDsToAntiAffinityGroups(set.List())
 		}
 	}
 
 	if v, ok := d.GetOk(AttrAntiAffinityGroupIDs); ok {
 		if set, ok := v.(*schema.Set); ok {
-			createPoolRequest.AntiAffinityGroups = func() (v []v3.AntiAffinityGroup) {
-				if l := set.Len(); l > 0 {
-					list := make([]v3.AntiAffinityGroup, l)
-					for i, v := range set.List() {
-						list[i] = v3.AntiAffinityGroup{
-							ID: v3.UUID(v.(string)),
-						}
-					}
-					v = list
-				}
-				return
-			}()
+			createPoolRequest.AntiAffinityGroups = utils.AntiAffinityGroupIDsToAntiAffinityGroups(set.List())
 		}
 	}
 
 	if set, ok := d.Get(AttrSecurityGroupIDs).(*schema.Set); ok {
-		createPoolRequest.SecurityGroups = func() (v []v3.SecurityGroup) {
-			if l := set.Len(); l > 0 {
-				list := make([]v3.SecurityGroup, l)
-				for i, v := range set.List() {
-					list[i] = v3.SecurityGroup{
-						ID: v3.UUID(v.(string)),
-					}
-				}
-				v = list
-			}
-			return
-		}()
+		createPoolRequest.SecurityGroups = utils.SecurityGroupIDsToSecurityGroups(set.List())
 	}
 
 	if set, ok := d.Get(AttrNetworkIDs).(*schema.Set); ok {
-		createPoolRequest.PrivateNetworks = func() (v []v3.PrivateNetwork) {
-			if l := set.Len(); l > 0 {
-				list := make([]v3.PrivateNetwork, l)
-				for i, v := range set.List() {
-					list[i] = v3.PrivateNetwork{
-						ID: v3.UUID(v.(string)),
-					}
-				}
-				v = list
-			}
-			return
-		}()
+		createPoolRequest.PrivateNetworks = utils.PrivateNetworkIDsToPrivateNetworks(set.List())
 	}
 
 	if set, ok := d.Get(AttrElasticIPIDs).(*schema.Set); ok {
-		createPoolRequest.ElasticIPS = func() (v []v3.ElasticIP) {
-			if l := set.Len(); l > 0 {
-				list := make([]v3.ElasticIP, l)
-				for i, v := range set.List() {
-					list[i] = v3.ElasticIP{
-						ID: v3.UUID(v.(string)),
-					}
-				}
-				v = list
-			}
-			return
-		}()
+		createPoolRequest.ElasticIPS = utils.ElasticIPIDsToElasticIPs(set.List())
 	}
 
 	enableIPv6 := d.Get(AttrIPv6).(bool)
@@ -506,15 +451,7 @@ func rUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	// update otherwise the orchestrator will interpret that as
 	// clearing the list of AAGs
 	set := d.Get(AttrAffinityGroupIDs).(*schema.Set)
-	updateRequest.AntiAffinityGroups = func() []v3.AntiAffinityGroup {
-		list := make([]v3.AntiAffinityGroup, set.Len())
-		for i, v := range set.List() {
-			list[i] = v3.AntiAffinityGroup{
-				ID: v3.UUID(v.(string)),
-			}
-		}
-		return list
-	}()
+	updateRequest.AntiAffinityGroups = utils.AntiAffinityGroupIDsToAntiAffinityGroups(set.List())
 	if d.HasChange(AttrAffinityGroupIDs) {
 		updated = true
 	} else {
@@ -525,15 +462,7 @@ func rUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	// update otherwise the orchestrator will interpret that as
 	// clearing the list of AAGs
 	set = d.Get(AttrAntiAffinityGroupIDs).(*schema.Set)
-	updateRequest.AntiAffinityGroups = func() []v3.AntiAffinityGroup {
-		list := make([]v3.AntiAffinityGroup, set.Len())
-		for i, v := range set.List() {
-			list[i] = v3.AntiAffinityGroup{
-				ID: v3.UUID(v.(string)),
-			}
-		}
-		return list
-	}()
+	updateRequest.AntiAffinityGroups = utils.AntiAffinityGroupIDsToAntiAffinityGroups(set.List())
 	if d.HasChange(AttrAntiAffinityGroupIDs) {
 		updated = true
 	}
@@ -566,15 +495,7 @@ func rUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	// update otherwise the orchestrator will interpret that as
 	// clearing the list of assocaited EIPs
 	set = d.Get(AttrElasticIPIDs).(*schema.Set)
-	updateRequest.ElasticIPS = func() []v3.ElasticIP {
-		list := make([]v3.ElasticIP, set.Len())
-		for i, v := range set.List() {
-			list[i] = v3.ElasticIP{
-				ID: v3.UUID(v.(string)),
-			}
-		}
-		return list
-	}()
+	updateRequest.ElasticIPS = utils.ElasticIPIDsToElasticIPs(set.List())
 	if d.HasChange(AttrElasticIPIDs) {
 		updated = true
 	}
@@ -621,15 +542,7 @@ func rUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	// update otherwise the orchestrator will interpret that as
 	// clearing the list of PrivNets
 	set = d.Get(AttrNetworkIDs).(*schema.Set)
-	updateRequest.PrivateNetworks = func() []v3.PrivateNetwork {
-		list := make([]v3.PrivateNetwork, set.Len())
-		for i, v := range set.List() {
-			list[i] = v3.PrivateNetwork{
-				ID: v3.UUID(v.(string)),
-			}
-		}
-		return list
-	}()
+	updateRequest.PrivateNetworks = utils.PrivateNetworkIDsToPrivateNetworks(set.List())
 	if d.HasChange(AttrNetworkIDs) {
 		updated = true
 	}
@@ -638,15 +551,7 @@ func rUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	// update otherwise the orchestrator will interpret that as
 	// clearing the list of SecurityGroups
 	set = d.Get(AttrSecurityGroupIDs).(*schema.Set)
-	updateRequest.SecurityGroups = func() []v3.SecurityGroup {
-		list := make([]v3.SecurityGroup, set.Len())
-		for i, v := range set.List() {
-			list[i] = v3.SecurityGroup{
-				ID: v3.UUID(v.(string)),
-			}
-		}
-		return list
-	}()
+	updateRequest.SecurityGroups = utils.SecurityGroupIDsToSecurityGroups(set.List())
 	if d.HasChange(AttrSecurityGroupIDs) {
 		updated = true
 	}
@@ -761,13 +666,7 @@ func rApply(ctx context.Context, client *v3.Client, d *schema.ResourceData, pool
 
 	if pool.AntiAffinityGroups != nil {
 		antiAffinityGroupIDs := make([]string, len(pool.AntiAffinityGroups))
-		copy(antiAffinityGroupIDs, func() []string {
-			l := make([]string, len(pool.AntiAffinityGroups))
-			for i, g := range pool.AntiAffinityGroups {
-				l[i] = g.ID.String()
-			}
-			return l
-		}())
+		copy(antiAffinityGroupIDs, utils.AntiAffiniGroupsToAntiAffinityGroupIDs(pool.AntiAffinityGroups))
 
 		if _, ok := d.GetOk(AttrAffinityGroupIDs); ok {
 			if err := d.Set(AttrAffinityGroupIDs, antiAffinityGroupIDs); err != nil {
@@ -800,13 +699,7 @@ func rApply(ctx context.Context, client *v3.Client, d *schema.ResourceData, pool
 
 	if pool.ElasticIPS != nil {
 		elasticIPIDs := make([]string, len(pool.ElasticIPS))
-		copy(elasticIPIDs, func() []string {
-			l := make([]string, len(pool.ElasticIPS))
-			for i, g := range pool.ElasticIPS {
-				l[i] = g.ID.String()
-			}
-			return l
-		}())
+		copy(elasticIPIDs, utils.ElasticIPsToElasticIPIDs(pool.ElasticIPS))
 
 		if err := d.Set(AttrElasticIPIDs, elasticIPIDs); err != nil {
 			return diag.FromErr(err)
@@ -836,25 +729,13 @@ func rApply(ctx context.Context, client *v3.Client, d *schema.ResourceData, pool
 	}
 
 	if pool.PrivateNetworks != nil {
-		if err := d.Set(AttrNetworkIDs, func() []string {
-			l := make([]string, len(pool.PrivateNetworks))
-			for i, g := range pool.PrivateNetworks {
-				l[i] = g.ID.String()
-			}
-			return l
-		}()); err != nil {
+		if err := d.Set(AttrNetworkIDs, utils.PrivateNetworksToPrivateNetworkIDs(pool.PrivateNetworks)); err != nil {
 			return diag.FromErr(err)
 		}
 	}
 
 	if pool.SecurityGroups != nil {
-		if err := d.Set(AttrSecurityGroupIDs, func() []string {
-			l := make([]string, len(pool.SecurityGroups))
-			for i, g := range pool.SecurityGroups {
-				l[i] = g.ID.String()
-			}
-			return l
-		}()); err != nil {
+		if err := d.Set(AttrSecurityGroupIDs, utils.SecurityGroupsToSecurityGroupIDs(pool.SecurityGroups)); err != nil {
 			return diag.FromErr(err)
 		}
 	}

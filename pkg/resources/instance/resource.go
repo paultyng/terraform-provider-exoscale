@@ -253,18 +253,7 @@ func rCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	}
 
 	if set, ok := d.Get(AttrAntiAffinityGroupIDs).(*schema.Set); ok {
-		instanceRequest.AntiAffinityGroups = func() (v []v3.AntiAffinityGroup) {
-			if l := set.Len(); l > 0 {
-				list := make([]v3.AntiAffinityGroup, l)
-				for i, v := range set.List() {
-					list[i] = v3.AntiAffinityGroup{
-						ID: v3.UUID(v.(string)),
-					}
-				}
-				v = list
-			}
-			return
-		}()
+		instanceRequest.AntiAffinityGroups = utils.AntiAffinityGroupIDsToAntiAffinityGroups(set.List())
 	}
 
 	if v, ok := d.GetOk(AttrDeployTargetID); ok {
@@ -320,18 +309,7 @@ func rCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag
 	}
 
 	if set, ok := d.Get(AttrSecurityGroupIDs).(*schema.Set); ok {
-		instanceRequest.SecurityGroups = func() (v []v3.SecurityGroup) {
-			if l := set.Len(); l > 0 {
-				list := make([]v3.SecurityGroup, l)
-				for i, v := range set.List() {
-					list[i] = v3.SecurityGroup{
-						ID: v3.UUID(v.(string)),
-					}
-				}
-				v = list
-			}
-			return
-		}()
+		instanceRequest.SecurityGroups = utils.SecurityGroupIDsToSecurityGroups(set.List())
 	}
 
 	instanceType, err := utils.FindInstanceTypeByNameV3(ctx, clientV3, d.Get(AttrType).(string))

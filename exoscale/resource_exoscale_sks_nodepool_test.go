@@ -36,6 +36,8 @@ var (
 	testAccResourceSKSNodepoolPrivateNetworkName                = acctest.RandomWithPrefix(testPrefix)
 	testAccResourceSKSNodepoolSize                        int64 = 2
 	testAccResourceSKSNodepoolSizeUpdated                 int64 = 1
+	testAccResourceSKSNodepoolIPV6Default                 bool  = false
+	testAccResourceSKSNodepoolIPV6Updated                 bool  = true
 	testAccResourceSKSNodepoolStorageLVM                  bool  = true
 	testAccResourceSKSNodepoolTaintEffect                       = "NoSchedule"
 	testAccResourceSKSNodepoolTaintValue                        = "test"
@@ -141,6 +143,7 @@ resource "exoscale_sks_nodepool" "test" {
   labels = { test = "%s" }
   taints = { test = "%s:%s" }
   storage_lvm = %t
+  ipv6        = %t
 
   timeouts {
     delete = "10m"
@@ -167,6 +170,7 @@ resource "exoscale_sks_nodepool" "test" {
 		testAccResourceSKSNodepoolTaintValueUpdated,
 		testAccResourceSKSNodepoolTaintEffect,
 		testAccResourceSKSNodepoolStorageLVM,
+		testAccResourceSKSNodepoolIPV6Updated,
 		testAccResourceSKSNodepoolKubeletImageGCMinAge,
 		testAccResourceSKSNodepoolKubeletImageGCHighThreshold,
 		testAccResourceSKSNodepoolKubeletImageGCLowThreshold,
@@ -228,6 +232,7 @@ func TestAccResourceSKSNodepool(t *testing.T) {
 						resSKSNodepoolAttrName:                                                         validateString(testAccResourceSKSNodepoolName),
 						resSKSNodepoolAttrSize:                                                         validateString(fmt.Sprint(testAccResourceSKSNodepoolSize)),
 						resSKSNodepoolAttrState:                                                        validation.ToDiagFunc(validation.NoZeroValues),
+						resSKSNOdepoolAttrIPV6Enabled:                                                  validateBool(testAccResourceSKSNodepoolIPV6Default),
 						resSKSNodepoolAttrTaints + ".test": validateString(fmt.Sprintf(
 							"%s:%s",
 							testAccResourceSKSNodepoolTaintValue,
@@ -285,6 +290,7 @@ func TestAccResourceSKSNodepool(t *testing.T) {
 						resSKSNodepoolAttrSecurityGroupIDs + ".#":                                      validateString("1"),
 						resSKSNodepoolAttrSize:                                                         validateString(fmt.Sprint(testAccResourceSKSNodepoolSizeUpdated)),
 						resSKSNodepoolAttrState:                                                        validation.ToDiagFunc(validation.NoZeroValues),
+						resSKSNOdepoolAttrIPV6Enabled:                                                  validateBool(testAccResourceSKSNodepoolIPV6Updated),
 						resSKSNodepoolAttrTaints + ".test": validateString(fmt.Sprintf(
 							"%s:%s",
 							testAccResourceSKSNodepoolTaintValueUpdated,

@@ -303,22 +303,10 @@ func dsBuildData(instance *v3.Instance, zone string) (map[string]interface{}, er
 	}
 
 	if instance.ElasticIPS != nil {
-		data[AttrElasticIPIDs] = func() []string {
-			list := make([]string, len(instance.ElasticIPS))
-			for i, eip := range instance.ElasticIPS {
-				list[i] = eip.ID.String()
-			}
-			return list
-		}()
+		data[AttrElasticIPIDs] = utils.ElasticIPsToElasticIPIDs(instance.ElasticIPS)
 	}
 	if instance.AntiAffinityGroups != nil {
-		data[AttrAntiAffinityGroupIDs] = func() []string {
-			list := make([]string, len(instance.AntiAffinityGroups))
-			for i, aag := range instance.AntiAffinityGroups {
-				list[i] = aag.ID.String()
-			}
-			return list
-		}()
+		data[AttrAntiAffinityGroupIDs] = utils.AntiAffiniGroupsToAntiAffinityGroupIDs(instance.AntiAffinityGroups)
 	}
 	if instance.Labels != nil {
 		data[AttrLabels] = instance.Labels
@@ -333,13 +321,7 @@ func dsBuildData(instance *v3.Instance, zone string) (map[string]interface{}, er
 		}()
 	}
 	if instance.SecurityGroups != nil {
-		data[AttrSecurityGroupIDs] = func() []string {
-			list := make([]string, len(instance.SecurityGroups))
-			for i, sg := range instance.SecurityGroups {
-				list[i] = sg.ID.String()
-			}
-			return list
-		}()
+		data[AttrSecurityGroupIDs] = utils.SecurityGroupsToSecurityGroupIDs(instance.SecurityGroups)
 	}
 
 	if instance.Manager != nil {

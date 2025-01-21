@@ -81,3 +81,21 @@ func validateComputeInstanceType(v interface{}, _ cty.Path) diag.Diagnostics {
 
 	return nil
 }
+
+// validateBool validates that the given field is a bool and matches the expected value.
+func validateBool(b bool) schema.SchemaValidateDiagFunc {
+	return validation.ToDiagFunc(func(i interface{}, k string) (s []string, es []error) {
+		value, err := strconv.ParseBool(i.(string))
+		if err != nil {
+			es = append(es, fmt.Errorf("expected type of %s to be bool: %w", k, err))
+			return
+		}
+
+		if value != b {
+			es = append(es, fmt.Errorf("bool %t doesn't match expected value %t", value, b))
+			return
+		}
+
+		return
+	})
+}

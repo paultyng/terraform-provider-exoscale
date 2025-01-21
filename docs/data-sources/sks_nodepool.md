@@ -30,6 +30,7 @@ description: |-
 - `instance_pool_id` (String) The underlying [exoscale_instance_pool](./instance_pool.md) ID.
 - `instance_prefix` (String) The string used to prefix the managed instances name (default `pool`).
 - `instance_type` (String) The managed compute instances type (`<family>.<size>`, e.g. `standard.medium`; use the [Exoscale CLI](https://github.com/exoscale/cli/) - `exo compute instance-type list` - for the list of available types).
+- `ipv6` (Boolean) Enable IPV6 for the nodepool nodes
 - `kubelet_image_gc` (Block Set) Configuration for this nodepool's kubelet image garbage collector (see [below for nested schema](#nestedblock--kubelet_image_gc))
 - `labels` (Map of String) A map of key/value labels.
 - `name` (String)

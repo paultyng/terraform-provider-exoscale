@@ -30,6 +30,7 @@ description: |-
 - `instance_pool_id` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `instance_prefix` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `instance_type` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
+- `ipv6` (Boolean) Match against this bool
 - `labels` (Map of String) Match against key/values. Keys are matched exactly, while values may be matched as a regex if you supply a string that begins and ends with "/"
 - `name` (String) Match against this string. If you supply a string that begins and ends with a "/" it will be matched as a regex.
 - `size` (Number) Match against this int
@@ -58,6 +59,7 @@ Read-Only:
 - `instance_pool_id` (String)
 - `instance_prefix` (String)
 - `instance_type` (String)
+- `ipv6` (Boolean)
 - `kubelet_image_gc` (Set of Object) (see [below for nested schema](#nestedobjatt--nodepools--kubelet_image_gc))
 - `labels` (Map of String)
 - `name` (String)

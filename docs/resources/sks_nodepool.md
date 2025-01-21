@@ -48,6 +48,7 @@ directory for complete configuration examples.
 - `description` (String) A free-form text describing the pool.
 - `disk_size` (Number) The managed instances disk size (GiB; default: `50`).
 - `instance_prefix` (String) The string used to prefix the managed instances name (default `pool`).
+- `ipv6` (Boolean) Enable IPV6 for the nodepool nodes
 - `kubelet_image_gc` (Block Set) Configuration for this nodepool's kubelet image garbage collector (see [below for nested schema](#nestedblock--kubelet_image_gc))
 - `labels` (Map of String) A map of key/value labels.
 - `private_network_ids` (Set of String) A list of [exoscale_private_network](./private_network.md) (IDs) to be attached to the managed instances.

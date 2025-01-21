@@ -340,33 +340,15 @@ func dsBuildData(pool *v3.InstancePool, zone string) (map[string]interface{}, er
 	}
 
 	if pool.ElasticIPS != nil {
-		data[AttrElasticIPIDs] = func() []string {
-			l := make([]string, len(pool.ElasticIPS))
-			for i, g := range pool.ElasticIPS {
-				l[i] = g.ID.String()
-			}
-			return l
-		}()
+		data[AttrElasticIPIDs] = utils.ElasticIPsToElasticIPIDs(pool.ElasticIPS)
 	}
 
 	if pool.PrivateNetworks != nil {
-		data[AttrNetworkIDs] = func() []string {
-			l := make([]string, len(pool.PrivateNetworks))
-			for i, g := range pool.PrivateNetworks {
-				l[i] = g.ID.String()
-			}
-			return l
-		}()
+		data[AttrNetworkIDs] = utils.PrivateNetworksToPrivateNetworkIDs(pool.PrivateNetworks)
 	}
 
 	if pool.SecurityGroups != nil {
-		data[AttrSecurityGroupIDs] = func() []string {
-			l := make([]string, len(pool.SecurityGroups))
-			for i, g := range pool.SecurityGroups {
-				l[i] = g.ID.String()
-			}
-			return l
-		}()
+		data[AttrSecurityGroupIDs] = utils.SecurityGroupsToSecurityGroupIDs(pool.SecurityGroups)
 	}
 
 	if pool.UserData != "" {
